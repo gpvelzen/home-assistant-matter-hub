@@ -285,15 +285,21 @@ export class ThermostatServerBase extends FullFeaturedBase {
 
     // When current_temperature is not available (common for AC controllers),
     // fall back to the target setpoint temperature (matching HA's UI behavior)
-    const localTemperature =
+    // Final guard: if everything is undefined/NaN, use 2100 (21°C) to prevent
+    // Matter.js validation errors from NaN values.
+    const rawLocalTemp =
       currentTemperature ??
       targetHeatingTemperature ??
       targetCoolingTemperature ??
       this.state.localTemperature;
+    const localTemperature =
+      typeof rawLocalTemp === "number" && !Number.isNaN(rawLocalTemp)
+        ? rawLocalTemp
+        : 2100;
 
     // Temperature limit handling:
     // Use HA's actual min/max limits for ALL modes (single and dual).
-    // With minSetpointDeadBand: 0, there are no deadband constraints to worry about.
+    // Without AutoMode, deadband is effectively 0 (no constraints).
     // Fall back to wide limits (0-50°C) only when HA doesn't provide limits.
     const WIDE_MIN = 0; // 0°C
     const WIDE_MAX = 5000; // 50°C
@@ -626,9 +632,9 @@ export class ThermostatServerBase extends FullFeaturedBase {
     const effectiveMin = min ?? 0; // 0°C
     const effectiveMax = max ?? 5000; // 50°C
 
-    // If value is undefined, use a reasonable default based on type
+    // If value is undefined or NaN, use a reasonable default based on type
     // Heat defaults to 20°C (2000), Cool defaults to 24°C (2400)
-    if (value == null) {
+    if (value == null || Number.isNaN(value)) {
       const defaultValue = type === "heat" ? 2000 : 2400;
       logger.debug(
         `${type} setpoint is undefined, using default: ${defaultValue}`,
