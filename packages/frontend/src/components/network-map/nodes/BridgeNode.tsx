@@ -5,6 +5,7 @@ import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import StopCircleIcon from "@mui/icons-material/StopCircle";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import { useColorScheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import { Handle, type NodeProps, Position } from "@xyflow/react";
 
@@ -19,40 +20,49 @@ export interface BridgeNodeData {
   [key: string]: unknown;
 }
 
-const statusConfig: Record<
-  string,
-  { color: string; bg: string; border: string; Icon: typeof CheckCircleIcon }
-> = {
-  running: {
-    color: "#2e7d32",
-    bg: "#e8f5e9",
-    border: "#4caf50",
-    Icon: CheckCircleIcon,
-  },
-  starting: {
-    color: "#ed6c02",
-    bg: "#fff3e0",
-    border: "#ff9800",
-    Icon: HourglassEmptyIcon,
-  },
-  stopped: {
-    color: "#757575",
-    bg: "#f5f5f5",
-    border: "#bdbdbd",
-    Icon: StopCircleIcon,
-  },
-  failed: {
-    color: "#d32f2f",
-    bg: "#ffebee",
-    border: "#f44336",
-    Icon: ErrorIcon,
-  },
+type StatusStyle = {
+  color: string;
+  bg: string;
+  border: string;
+  Icon: typeof CheckCircleIcon;
 };
+
+function getStatusConfig(isDark: boolean): Record<string, StatusStyle> {
+  return {
+    running: {
+      color: isDark ? "#81c784" : "#2e7d32",
+      bg: isDark ? "#1b3a1b" : "#e8f5e9",
+      border: "#4caf50",
+      Icon: CheckCircleIcon,
+    },
+    starting: {
+      color: isDark ? "#ffb74d" : "#ed6c02",
+      bg: isDark ? "#3a2a10" : "#fff3e0",
+      border: "#ff9800",
+      Icon: HourglassEmptyIcon,
+    },
+    stopped: {
+      color: isDark ? "#bdbdbd" : "#757575",
+      bg: isDark ? "#2a2a2a" : "#f5f5f5",
+      border: isDark ? "#616161" : "#bdbdbd",
+      Icon: StopCircleIcon,
+    },
+    failed: {
+      color: isDark ? "#ef5350" : "#d32f2f",
+      bg: isDark ? "#3a1515" : "#ffebee",
+      border: "#f44336",
+      Icon: ErrorIcon,
+    },
+  };
+}
 
 export const BridgeNode = ({ data }: NodeProps) => {
   const { label, status, port, deviceCount, failedCount, fabricCount } =
     data as unknown as BridgeNodeData;
-  const config = statusConfig[status] ?? statusConfig.stopped;
+  const { mode } = useColorScheme();
+  const isDark = mode === "dark";
+  const statusCfg = getStatusConfig(isDark);
+  const config = statusCfg[status] ?? statusCfg.stopped;
   const { Icon } = config;
 
   return (

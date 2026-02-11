@@ -6,6 +6,8 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import UndoIcon from "@mui/icons-material/Undo";
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
@@ -24,7 +26,7 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getEndpointName } from "../../components/endpoints/EndpointName.tsx";
 import { BridgeNode } from "../../components/network-map/nodes/BridgeNode.tsx";
 import { DeviceNode } from "../../components/network-map/nodes/DeviceNode.tsx";
@@ -284,6 +286,10 @@ export const NetworkMapPage = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { mode } = useColorScheme();
   const isDark = mode === "dark";
+  const undoStackRef = useRef<
+    { nodeId: string; position: { x: number; y: number } }[]
+  >([]);
+  const [canUndo, setCanUndo] = useState(false);
 
   useEffect(() => {
     dispatch(loadBridges());
@@ -327,6 +333,26 @@ export const NetworkMapPage = () => {
     };
 
     const graph = buildGraph(bridges, devicesByBridge, layout);
+
+    // Restore saved positions from localStorage
+    const STORAGE_KEY = "hamh-network-map-positions";
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const positions = JSON.parse(saved) as Record<
+          string,
+          { x: number; y: number }
+        >;
+        for (const node of graph.nodes) {
+          if (positions[node.id]) {
+            node.position = positions[node.id];
+          }
+        }
+      }
+    } catch {
+      /* ignore corrupt data */
+    }
+
     setNodes(graph.nodes);
     setEdges(graph.edges);
   }, [bridges, devicesByBridge, devicesLoaded, setNodes, setEdges]);
@@ -334,6 +360,67 @@ export const NetworkMapPage = () => {
   const handleRefresh = useCallback(() => {
     dispatch(loadBridges());
   }, [dispatch]);
+
+  const onNodeDragStop = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      // Save the previous position for undo before persisting
+      const prev = nodes.find((n) => n.id === node.id);
+      if (prev) {
+        undoStackRef.current.push({
+          nodeId: node.id,
+          position: { ...prev.position },
+        });
+        setCanUndo(true);
+      }
+
+      // Persist all current positions to localStorage
+      const STORAGE_KEY = "hamh-network-map-positions";
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const positions: Record<string, { x: number; y: number }> = saved
+          ? JSON.parse(saved)
+          : {};
+        positions[node.id] = { x: node.position.x, y: node.position.y };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+      } catch {
+        /* ignore */
+      }
+    },
+    [nodes],
+  );
+
+  const handleResetLayout = useCallback(() => {
+    localStorage.removeItem("hamh-network-map-positions");
+    undoStackRef.current = [];
+    setCanUndo(false);
+    // Re-trigger graph build by reloading bridges
+    dispatch(loadBridges());
+  }, [dispatch]);
+
+  const handleUndo = useCallback(() => {
+    const last = undoStackRef.current.pop();
+    if (!last) return;
+    setCanUndo(undoStackRef.current.length > 0);
+
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === last.nodeId ? { ...n, position: last.position } : n,
+      ),
+    );
+
+    // Update localStorage
+    const STORAGE_KEY = "hamh-network-map-positions";
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const positions: Record<string, { x: number; y: number }> = saved
+        ? JSON.parse(saved)
+        : {};
+      positions[last.nodeId] = last.position;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+    } catch {
+      /* ignore */
+    }
+  }, [setNodes]);
 
   const isLoading = bridgesLoading || !devicesLoaded;
 
@@ -354,8 +441,24 @@ export const NetworkMapPage = () => {
           <AccountTreeIcon />
           Network Map
         </Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Tooltip title="Refresh">
+        <Box sx={{ display: "flex", gap: 0.5 }}>
+          <Tooltip title="Undo last move">
+            <span>
+              <IconButton
+                onClick={handleUndo}
+                color="primary"
+                disabled={!canUndo}
+              >
+                <UndoIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Reset layout">
+            <IconButton onClick={handleResetLayout} color="primary">
+              <RestartAltIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Refresh data">
             <IconButton onClick={handleRefresh} color="primary">
               <RefreshIcon />
             </IconButton>
@@ -392,6 +495,7 @@ export const NetworkMapPage = () => {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onNodeDragStop={onNodeDragStop}
             nodeTypes={nodeTypes}
             colorMode={isDark ? "dark" : "light"}
             fitView
@@ -471,7 +575,7 @@ export const NetworkMapPage = () => {
               width: 12,
               height: 12,
               borderRadius: 0.5,
-              background: "#e8f5e9",
+              background: isDark ? "#1b3a1b" : "#e8f5e9",
               border: "1px solid #4caf50",
             }}
           />
@@ -485,8 +589,8 @@ export const NetworkMapPage = () => {
               width: 12,
               height: 12,
               borderRadius: 0.5,
-              background: "#fff",
-              border: "1px solid #bdbdbd",
+              background: isDark ? "#2a2a2a" : "#fff",
+              border: `1px solid ${isDark ? "#616161" : "#bdbdbd"}`,
             }}
           />
           <Typography variant="caption" color="text.secondary">
@@ -499,7 +603,7 @@ export const NetworkMapPage = () => {
               width: 12,
               height: 12,
               borderRadius: 0.5,
-              background: "#ffebee",
+              background: isDark ? "#3a1515" : "#ffebee",
               border: "1px dashed #f44336",
             }}
           />

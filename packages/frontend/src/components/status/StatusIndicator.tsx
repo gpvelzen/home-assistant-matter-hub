@@ -143,9 +143,10 @@ export function StatusIndicator() {
         label={getStatusLabel()}
         color={getStatusColor()}
         size="small"
-        variant="outlined"
+        variant="filled"
         sx={{
           borderRadius: 1,
+          fontWeight: 600,
           "& .MuiChip-icon": {
             color: "inherit",
           },

@@ -1,5 +1,6 @@
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import Box from "@mui/material/Box";
+import { useColorScheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import { Handle, type NodeProps, Position } from "@xyflow/react";
 
@@ -11,11 +12,14 @@ export interface FailedNodeData {
 
 export const FailedNode = ({ data }: NodeProps) => {
   const { label, reason } = data as unknown as FailedNodeData;
+  const { mode } = useColorScheme();
+  const isDark = mode === "dark";
+  const textColor = isDark ? "#ef5350" : "#d32f2f";
 
   return (
     <Box
       sx={{
-        background: "#ffebee",
+        background: isDark ? "#3a1515" : "#ffebee",
         border: "1px dashed #f44336",
         borderRadius: 1.5,
         px: 1.5,
@@ -34,12 +38,12 @@ export const FailedNode = ({ data }: NodeProps) => {
       />
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-        <ErrorOutlineIcon sx={{ fontSize: 14, color: "#d32f2f" }} />
+        <ErrorOutlineIcon sx={{ fontSize: 14, color: textColor }} />
         <Typography
           variant="caption"
           fontWeight={600}
           noWrap
-          sx={{ maxWidth: 160, color: "#d32f2f" }}
+          sx={{ maxWidth: 160, color: textColor }}
         >
           {label}
         </Typography>
