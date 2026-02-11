@@ -157,6 +157,8 @@ export class BridgeEndpointManager extends Service {
             this.log.warn(
               `Failed to add endpoint for ${entityId}: ${errorMessage}`,
             );
+            // Extract detailed behavior error info for debugging
+            this.logDetailedError(entityId, e);
             this._failedEntities.push({
               entityId,
               reason: this.extractErrorReason(e),
@@ -182,6 +184,53 @@ export class BridgeEndpointManager extends Service {
       if (result.status === "rejected") {
         this.log.warn("State update failed for endpoint:", result.reason);
       }
+    }
+  }
+
+  /**
+   * Log detailed behavior error information for debugging "Behaviors have errors".
+   * Matter.js wraps individual behavior failures into a composite error.
+   * This extracts and logs the specific behavior that failed and why.
+   */
+  private logDetailedError(entityId: string, error: unknown): void {
+    if (!(error instanceof Error)) return;
+
+    // Walk the cause chain
+    let current: unknown = error;
+    const causes: string[] = [];
+    while (current instanceof Error) {
+      if (current.message && current.message !== error.message) {
+        causes.push(current.message);
+      }
+      if (current.stack) {
+        // Extract behavior name from stack trace (e.g., "at OnOffServer.initialize")
+        const behaviorMatch = current.stack.match(
+          /at (\w+Server\w*|BasicInformation\w*|HomeAssistant\w*|FixedLabel\w*|IdentifyServer\w*)\.(initialize|#\w+)/,
+        );
+        if (behaviorMatch) {
+          causes.push(`in ${behaviorMatch[1]}.${behaviorMatch[2]}`);
+        }
+      }
+      current = (current as Error & { cause?: unknown }).cause;
+    }
+
+    // Check for AggregateError-style errors array
+    const errorsArray = (error as Error & { errors?: unknown[] }).errors;
+    if (Array.isArray(errorsArray)) {
+      for (const subError of errorsArray) {
+        const msg =
+          subError instanceof Error ? subError.message : String(subError);
+        causes.push(msg);
+      }
+    }
+
+    if (causes.length > 0) {
+      this.log.warn(`[${entityId}] Detailed error info: ${causes.join(" → ")}`);
+    }
+
+    // Log the full stack at debug level for comprehensive debugging
+    if (error.stack) {
+      this.log.debug(`[${entityId}] Full stack: ${error.stack}`);
     }
   }
 

@@ -87,8 +87,12 @@ export function createLegacyEndpointType(
  * Google Home uses { label: "room", value: "<name>" } for automatic room assignment.
  */
 function addFixedLabel(type: EndpointType, areaName: string): EndpointType {
+  // Matter spec: LabelStruct label and value fields are max 16 bytes each.
+  // Truncate area name to prevent "Behaviors have errors" validation failures.
+  const truncatedName =
+    areaName.length > 16 ? areaName.substring(0, 16) : areaName;
   const fixedLabelWithDefaults = FixedLabelServer.set({
-    labelList: [{ label: "room", value: areaName }],
+    labelList: [{ label: "room", value: truncatedName }],
   });
   return {
     ...type,
