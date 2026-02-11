@@ -17,18 +17,20 @@ import RunningMode = Thermostat.ThermostatRunningMode;
 import type { ActionContext } from "@matter/main";
 import { transactionIsOffline } from "../../utils/transaction-is-offline.js";
 
-// For dual-mode thermostats (heating + cooling), we intentionally do NOT enable AutoMode.
-// AutoMode adds the thermostatRunningMode attribute, which Matter.js's internal
-// #handleSystemModeChange reactor overrides to match systemMode for non-Auto modes
-// (Heat→Heat, Cool→Cool, never Off). This prevents controllers like Apple Home from
-// distinguishing active heating/cooling ("Heating to 26") from idle ("Heat to 26").
+// For dual-mode thermostats (heating + cooling), AutoMode is ENABLED to expose
+// thermostatRunningMode. Apple Home uses this attribute for the active/idle display
+// ("Heating to 26" vs "Heat to 26"). Without it, Apple Home cannot show active state.
 //
-// Without AutoMode:
-// - thermostatRunningMode is not exposed → Apple Home relies on thermostatRunningState
-// - Deadband is effectively 0 (Matter.js returns 0 for non-AutoMode devices)
-// - SystemMode.Auto still works (validated by controlSequenceOfOperation, not feature flag)
-// - Matter.js issue #3105 is avoided entirely (no reactor writing without permissions)
-// See: https://github.com/matter-js/matter.js/issues/3105
+// Matter.js's internal #handleSystemModeChange reactor forces thermostatRunningMode
+// to match systemMode for non-Auto modes (Heat→Heat, Cool→Cool). This means:
+// - In Heat/Cool mode: Apple Home always shows "Heating/Cooling to" (acceptable,
+//   matches Matterbridge behavior — the device IS in that mode)
+// - In Auto mode: Reactor doesn't fire → we set runningMode from hvac_action
+//   for proper active/idle distinction
+//
+// For heat-only / cool-only devices, AutoMode is NOT enabled:
+// - Prevents Alexa from expecting dual setpoints (→ "not supported" errors)
+// - thermostatRunningState is still set for controllers that support it
 
 // Default state values for each feature combination.
 // These MUST be set via .set() when creating the behavior class because Matter.js
@@ -67,11 +69,12 @@ const coolingOnlyDefaults = {
   thermostatRunningState: runningStateAllOff,
 };
 
-// Full defaults include both heating and cooling.
-// No AutoMode → no minSetpointDeadBand attribute needed (Matter.js uses 0 internally).
+// Full defaults include both heating, cooling, and AutoMode.
+// minSetpointDeadBand: 0 allows heat/cool setpoints to be equal (no gap required).
 const fullDefaults = {
   ...heatingOnlyDefaults,
   ...coolingOnlyDefaults,
+  minSetpointDeadBand: 0,
 };
 
 // Feature-specific bases for different thermostat types.
@@ -81,7 +84,9 @@ const fullDefaults = {
 // See: https://github.com/RiDDiX/home-assistant-matter-hub/issues/136
 const HeatingOnlyFeaturedBase = Base.with("Heating").set(heatingOnlyDefaults);
 const CoolingOnlyFeaturedBase = Base.with("Cooling").set(coolingOnlyDefaults);
-const FullFeaturedBase = Base.with("Heating", "Cooling").set(fullDefaults);
+const FullFeaturedBase = Base.with("Heating", "Cooling", "AutoMode").set(
+  fullDefaults,
+);
 
 export interface ThermostatRunningState {
   heat: boolean;
@@ -178,8 +183,14 @@ function thermostatPreInitialize(self: any): void {
 
   // Initialize thermostatRunningState (optional attribute) so controllers
   // subscribe to it from the start. This is the bitmap that indicates active
-  // heating/cooling — used by Apple Home for "Heating to" vs "Heat to" display.
+  // heating/cooling.
   self.state.thermostatRunningState = runningStateAllOff;
+
+  // For full HVAC devices (AutoMode enabled): ensure minSetpointDeadBand is set.
+  // Also initialize thermostatRunningMode so Apple Home subscribes from the start.
+  if (self.features.heating && self.features.cooling) {
+    self.state.minSetpointDeadBand = self.state.minSetpointDeadBand ?? 0;
+  }
 
   // Set initial controlSequenceOfOperation based on enabled features.
   // Will be updated from HA entity's actual hvac_modes in update().
@@ -299,7 +310,7 @@ export class ThermostatServerBase extends FullFeaturedBase {
 
     // Temperature limit handling:
     // Use HA's actual min/max limits for ALL modes (single and dual).
-    // Without AutoMode, deadband is effectively 0 (no constraints).
+    // minSetpointDeadBand: 0 for full HVAC devices (no gap between heat/cool setpoints).
     // Fall back to wide limits (0-50°C) only when HA doesn't provide limits.
     const WIDE_MIN = 0; // 0°C
     const WIDE_MAX = 5000; // 50°C
@@ -364,6 +375,12 @@ export class ThermostatServerBase extends FullFeaturedBase {
       ),
       thermostatRunningState: this.getRunningState(systemMode, runningMode),
       systemMode: systemMode,
+      // For full HVAC (AutoMode enabled): set thermostatRunningMode from hvac_action.
+      // Matter.js's reactor overrides this for non-Auto systemModes (Heat→Heat, Cool→Cool),
+      // but for Auto mode the reactor doesn't fire, so our value persists.
+      ...(this.features.heating && this.features.cooling
+        ? { thermostatRunningMode: runningMode }
+        : {}),
       ...(this.features.heating
         ? { occupiedHeatingSetpoint: clampedHeatingSetpoint }
         : {}),
@@ -784,6 +801,7 @@ export function ThermostatServer(
       localTemperature: initialState.localTemperature ?? 2100,
       occupiedHeatingSetpoint: initialState.occupiedHeatingSetpoint ?? 2000,
       occupiedCoolingSetpoint: initialState.occupiedCoolingSetpoint ?? 2400,
+      minSetpointDeadBand: 0,
     });
   }
 

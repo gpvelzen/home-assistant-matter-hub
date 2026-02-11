@@ -252,6 +252,7 @@ export function ClimateDevice(
           }
         : {}),
       localTemperature: initialState.localTemperature ?? 2100,
+      ...(supportsHeating && supportsCooling ? { minSetpointDeadBand: 0 } : {}),
     },
   });
 }
