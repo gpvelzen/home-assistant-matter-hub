@@ -79,6 +79,7 @@ const SortableBridgeCard = ({ bridge, index }: SortableBridgeCardProps) => {
         cursor: "grab",
         "&:active": { cursor: "grabbing" },
         bgcolor: isDragging ? "action.selected" : "background.paper",
+        width: "fit-content",
       }}
     >
       <CardContent
