@@ -35,6 +35,39 @@ interface LevelControlState {
   currentLevel?: number;
 }
 
+interface ColorControlState {
+  colorMode?: number;
+  colorTemperatureMireds?: number;
+  currentHue?: number;
+  currentSaturation?: number;
+}
+
+interface MeasurementState {
+  measuredValue?: number | null;
+}
+
+interface FanControlState {
+  fanMode?: number;
+  percentCurrent?: number;
+}
+
+interface WindowCoveringState {
+  currentPositionLiftPercent100ths?: number;
+}
+
+interface DoorLockState {
+  lockState?: number;
+}
+
+interface BooleanState {
+  stateValue?: boolean;
+}
+
+interface StateChip {
+  label: string;
+  color?: "success" | "error" | "warning" | "info" | "default";
+}
+
 const getDeviceIcon = (deviceType: string): string => {
   const type = deviceType.toLowerCase();
   if (type.includes("light")) return "💡";
@@ -122,35 +155,148 @@ export const EndpointCard = ({
     );
   }, [endpoint.state]);
 
-  const onOffState = useMemo(() => {
-    const state = endpoint.state as { onOff?: OnOffState };
-    return state.onOff;
-  }, [endpoint.state]);
+  const stateChips = useMemo(() => {
+    const s = endpoint.state as Record<string, unknown>;
+    const chips: StateChip[] = [];
 
-  const levelState = useMemo(() => {
-    const state = endpoint.state as { levelControl?: LevelControlState };
-    return state.levelControl;
-  }, [endpoint.state]);
+    const onOff = s.onOff as OnOffState | undefined;
+    const level = s.levelControl as LevelControlState | undefined;
+    const thermo = s.thermostat as ThermostatState | undefined;
+    const color = s.colorControl as ColorControlState | undefined;
+    const fan = s.fanControl as FanControlState | undefined;
+    const temp = s.temperatureMeasurement as MeasurementState | undefined;
+    const humidity = s.relativeHumidityMeasurement as
+      | MeasurementState
+      | undefined;
+    const pressure = s.pressureMeasurement as MeasurementState | undefined;
+    const illuminance = s.illuminanceMeasurement as
+      | MeasurementState
+      | undefined;
+    const co2 = s.carbonDioxideConcentrationMeasurement as
+      | MeasurementState
+      | undefined;
+    const pm25 = s.pm25ConcentrationMeasurement as MeasurementState | undefined;
+    const tvoc = s.totalVolatileOrganicCompoundsConcentrationMeasurement as
+      | MeasurementState
+      | undefined;
+    const cover = s.windowCovering as WindowCoveringState | undefined;
+    const lock = s.doorLock as DoorLockState | undefined;
+    const boolean = s.booleanState as BooleanState | undefined;
 
-  const thermostatState = useMemo(() => {
-    const state = endpoint.state as { thermostat?: ThermostatState };
-    return state.thermostat;
-  }, [endpoint.state]);
+    // On/Off state
+    if (onOff?.onOff !== undefined) {
+      chips.push({
+        label: onOff.onOff ? "On" : "Off",
+        color: onOff.onOff ? "success" : "default",
+      });
+    }
 
-  const stateDisplay = useMemo(() => {
-    if (thermostatState?.localTemperature !== undefined) {
-      const temp = thermostatState.localTemperature / 100;
-      return `${temp.toFixed(1)}°C`;
+    // Brightness (only if on)
+    if (level?.currentLevel !== undefined) {
+      const percent = Math.round((level.currentLevel / 254) * 100);
+      chips.push({ label: `${percent}%` });
     }
-    if (levelState?.currentLevel !== undefined) {
-      const percent = Math.round((levelState.currentLevel / 254) * 100);
-      return `${percent}%`;
+
+    // Color temperature (only for CT mode)
+    if (
+      color?.colorTemperatureMireds != null &&
+      color.colorTemperatureMireds > 0
+    ) {
+      const kelvin = Math.round(1000000 / color.colorTemperatureMireds);
+      chips.push({ label: `${kelvin}K` });
     }
-    if (onOffState?.onOff !== undefined) {
-      return onOffState.onOff ? "On" : "Off";
+
+    // Thermostat
+    if (thermo?.localTemperature != null) {
+      const t = thermo.localTemperature / 100;
+      chips.push({ label: `${t.toFixed(1)}°C` });
     }
-    return null;
-  }, [onOffState, levelState, thermostatState]);
+    if (thermo?.systemMode !== undefined) {
+      const modes: Record<number, string> = {
+        0: "Off",
+        1: "Auto",
+        3: "Cool",
+        4: "Heat",
+        7: "Fan",
+        8: "Dry",
+      };
+      const mode = modes[thermo.systemMode];
+      if (mode) {
+        chips.push({
+          label: mode,
+          color: thermo.systemMode === 0 ? "default" : "info",
+        });
+      }
+    }
+
+    // Temperature sensor
+    if (temp?.measuredValue != null) {
+      const t = temp.measuredValue / 100;
+      chips.push({ label: `${t.toFixed(1)}°C` });
+    }
+
+    // Humidity sensor
+    if (humidity?.measuredValue != null) {
+      const h = humidity.measuredValue / 100;
+      chips.push({ label: `${h.toFixed(0)}% RH` });
+    }
+
+    // Pressure sensor
+    if (pressure?.measuredValue != null) {
+      chips.push({ label: `${pressure.measuredValue} hPa` });
+    }
+
+    // Illuminance sensor
+    if (illuminance?.measuredValue != null && illuminance.measuredValue > 0) {
+      const lux = Math.round(10 ** ((illuminance.measuredValue - 1) / 10000));
+      chips.push({ label: `${lux} lx` });
+    }
+
+    // CO2 sensor
+    if (co2?.measuredValue != null) {
+      chips.push({ label: `${Math.round(co2.measuredValue)} ppm CO2` });
+    }
+
+    // PM2.5 sensor
+    if (pm25?.measuredValue != null) {
+      chips.push({ label: `PM2.5: ${Math.round(pm25.measuredValue)}` });
+    }
+
+    // TVOC sensor
+    if (tvoc?.measuredValue != null) {
+      chips.push({ label: `TVOC: ${Math.round(tvoc.measuredValue)}` });
+    }
+
+    // Fan
+    if (fan?.percentCurrent != null && fan.percentCurrent > 0) {
+      chips.push({ label: `Fan ${fan.percentCurrent}%` });
+    }
+
+    // Window covering
+    if (cover?.currentPositionLiftPercent100ths != null) {
+      const pos = Math.round(cover.currentPositionLiftPercent100ths / 100);
+      chips.push({ label: `${pos}% open` });
+    }
+
+    // Door lock
+    if (lock?.lockState !== undefined) {
+      const locked = lock.lockState === 1;
+      chips.push({
+        label: locked ? "Locked" : "Unlocked",
+        color: locked ? "success" : "warning",
+      });
+    }
+
+    // Boolean state (contact sensors, etc.)
+    if (boolean?.stateValue !== undefined && onOff?.onOff === undefined) {
+      chips.push({
+        label: boolean.stateValue ? "Open" : "Closed",
+        color: boolean.stateValue ? "warning" : "success",
+      });
+    }
+
+    return chips;
+  }, [endpoint.state]);
 
   return (
     <Card
@@ -230,14 +376,15 @@ export const EndpointCard = ({
                   fontWeight: 500,
                 }}
               />
-              {stateDisplay && (
+              {stateChips.map((chip) => (
                 <Chip
-                  label={stateDisplay}
+                  key={chip.label}
+                  label={chip.label}
                   size="small"
                   variant="outlined"
-                  color={onOffState?.onOff ? "success" : "default"}
+                  color={chip.color ?? "default"}
                 />
-              )}
+              ))}
             </Stack>
           </Box>
         </Box>
