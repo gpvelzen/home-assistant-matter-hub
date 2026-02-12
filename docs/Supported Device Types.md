@@ -232,15 +232,16 @@ Various sensor types mapped based on `device_class` and `unit_of_measurement`.
 
 Mapped based on `device_class` attribute.
 
-| Device Class | Matter Device Type | Controller Support |
-|--------------|-------------------|-------------------|
-| `door`, `window`, `garage_door` | ContactSensor | | All |
-| `motion`, `occupancy`, `presence` | OccupancySensor | | All |
-| `moisture`, `water` | WaterLeakDetector | | Limited |
-| `smoke` | SmokeCoAlarm (Smoke) | | Limited |
-| `carbon_monoxide` | SmokeCoAlarm (CO) | | Limited |
-| `gas` | SmokeCoAlarm (Gas) | | Limited |
-| Other | OnOffSensor | | All |
+| Device Class | Matter Device Type | Controller Display |
+|--------------|-------------------|--------------------|
+| `running`, `plug`, `power`, `battery_charging`, `light` | OnOffSensor | On/Off |
+| `door`, `window`, `garage_door`, `opening`, `lock` | ContactSensor | Open/Closed |
+| `battery`, `cold`, `heat`, `connectivity`, `problem`, `safety`, `sound`, `tamper`, `update`, `vibration` | ContactSensor | Open/Closed |
+| `motion`, `moving`, `occupancy`, `presence` | OccupancySensor | Occupied/Clear |
+| `moisture` | WaterLeakDetector | Leak/Dry |
+| `smoke` | SmokeCoAlarm (Smoke) | Alarm |
+| `carbon_monoxide`, `gas` | SmokeCoAlarm (CO) | Alarm |
+| Other / unset | OnOffSensor | On/Off |
 
 ---
 
