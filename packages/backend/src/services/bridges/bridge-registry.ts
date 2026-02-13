@@ -1,6 +1,7 @@
 import type {
   HomeAssistantDeviceRegistry,
   HomeAssistantEntityRegistry,
+  HomeAssistantEntityState,
   HomeAssistantFilter,
   SensorDeviceAttributes,
 } from "@home-assistant-matter-hub/common";
@@ -308,7 +309,8 @@ export class BridgeRegistry {
       }
 
       // Check filter matching
-      return this.matchesFilter(filter, entity, device);
+      const state = this.registry.states[entity.entity_id];
+      return this.matchesFilter(filter, entity, device, state);
     });
     this._states = pickBy(
       this.registry.states,
@@ -418,16 +420,23 @@ export class BridgeRegistry {
     filter: HomeAssistantFilter,
     entity: HomeAssistantEntityRegistry,
     device: HomeAssistantDeviceRegistry,
+    entityState?: HomeAssistantEntityState,
   ) {
     if (
       filter.include.length > 0 &&
-      !testMatchers(filter.include, device, entity, filter.includeMode)
+      !testMatchers(
+        filter.include,
+        device,
+        entity,
+        filter.includeMode,
+        entityState,
+      )
     ) {
       return false;
     }
     if (
       filter.exclude.length > 0 &&
-      testMatchers(filter.exclude, device, entity)
+      testMatchers(filter.exclude, device, entity, "any", entityState)
     ) {
       return false;
     }

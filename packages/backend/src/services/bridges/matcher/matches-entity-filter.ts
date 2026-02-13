@@ -1,6 +1,7 @@
 import type {
   HomeAssistantDeviceRegistry,
   HomeAssistantEntityRegistry,
+  HomeAssistantEntityState,
   HomeAssistantFilterMode,
   HomeAssistantMatcher,
 } from "@home-assistant-matter-hub/common";
@@ -17,17 +18,23 @@ export function testMatchers(
   device: HomeAssistantDeviceRegistry | undefined,
   entity: HomeAssistantEntityRegistry,
   mode: HomeAssistantFilterMode = "any",
+  entityState?: HomeAssistantEntityState,
 ) {
   if (mode === "all") {
-    return matchers.every((matcher) => testMatcher(matcher, device, entity));
+    return matchers.every((matcher) =>
+      testMatcher(matcher, device, entity, entityState),
+    );
   }
-  return matchers.some((matcher) => testMatcher(matcher, device, entity));
+  return matchers.some((matcher) =>
+    testMatcher(matcher, device, entity, entityState),
+  );
 }
 
 export function testMatcher(
   matcher: HomeAssistantMatcher,
   device: HomeAssistantDeviceRegistry | undefined,
   entity: HomeAssistantEntityRegistry,
+  entityState?: HomeAssistantEntityState,
 ): boolean {
   switch (matcher.type) {
     case "domain":
@@ -51,6 +58,8 @@ export function testMatcher(
       return testDeviceName(matcher.value, device);
     case "product_name":
       return testProductName(matcher.value, device);
+    case "device_class":
+      return entityState?.attributes?.device_class === matcher.value;
   }
   return false;
 }
