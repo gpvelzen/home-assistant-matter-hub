@@ -61,6 +61,8 @@ export function EntityMappingDialog({
   const [batteryEntity, setBatteryEntity] = useState("");
   const [roomEntities, setRoomEntities] = useState<string[]>([]);
   const [disableLockPin, setDisableLockPin] = useState(false);
+  const [powerEntity, setPowerEntity] = useState("");
+  const [energyEntity, setEnergyEntity] = useState("");
   const [availableButtons, setAvailableButtons] = useState<RelatedButton[]>([]);
   const [loadingButtons, setLoadingButtons] = useState(false);
 
@@ -79,6 +81,8 @@ export function EntityMappingDialog({
       setBatteryEntity(currentMapping?.batteryEntity || "");
       setRoomEntities(currentMapping?.roomEntities || []);
       setDisableLockPin(currentMapping?.disableLockPin || false);
+      setPowerEntity(currentMapping?.powerEntity || "");
+      setEnergyEntity(currentMapping?.energyEntity || "");
       setAvailableButtons([]);
     }
   }, [open, entityId, currentMapping]);
@@ -125,6 +129,8 @@ export function EntityMappingDialog({
       batteryEntity: batteryEntity.trim() || undefined,
       roomEntities: roomEntities.length > 0 ? roomEntities : undefined,
       disableLockPin: disableLockPin || undefined,
+      powerEntity: powerEntity.trim() || undefined,
+      energyEntity: energyEntity.trim() || undefined,
     });
   }, [
     editEntityId,
@@ -138,6 +144,8 @@ export function EntityMappingDialog({
     batteryEntity,
     roomEntities,
     disableLockPin,
+    powerEntity,
+    energyEntity,
     onSave,
   ]);
 
@@ -160,6 +168,14 @@ export function EntityMappingDialog({
   // Show PIN disable option for locks
   const showLockPinField =
     matterDeviceType === "door_lock" || currentDomain === "lock";
+
+  // Show power/energy entity fields for switches, lights, and plugs
+  const showEnergyFields =
+    currentDomain === "switch" ||
+    currentDomain === "light" ||
+    matterDeviceType === "on_off_plugin_unit" ||
+    matterDeviceType === "on_off_switch" ||
+    matterDeviceType === "dimmable_plugin_unit";
 
   const availableTypes = Object.entries(matterDeviceTypeLabels) as [
     MatterDeviceType,
@@ -358,6 +374,29 @@ export function EntityMappingDialog({
               value={batteryEntity}
               onChange={(e) => setBatteryEntity(e.target.value)}
               helperText="Include battery level from a separate sensor entity"
+            />
+          </>
+        )}
+
+        {showEnergyFields && (
+          <>
+            <TextField
+              fullWidth
+              margin="normal"
+              label="Power Sensor (optional)"
+              placeholder="sensor.smart_plug_power"
+              value={powerEntity}
+              onChange={(e) => setPowerEntity(e.target.value)}
+              helperText="Sensor with device_class: power (W) — adds real-time power measurement to this device"
+            />
+            <TextField
+              fullWidth
+              margin="normal"
+              label="Energy Sensor (optional)"
+              placeholder="sensor.smart_plug_energy"
+              value={energyEntity}
+              onChange={(e) => setEnergyEntity(e.target.value)}
+              helperText="Sensor with device_class: energy (kWh) — adds cumulative energy measurement to this device"
             />
           </>
         )}
