@@ -19,7 +19,7 @@
 ---
 
 > [!NOTE]
-> 🔀 **Community Fork** - This is a fork of the original [t0bst4r/home-assistant-matter-hub](https://github.com/t0bst4r/home-assistant-matter-hub), which was discontinued in January 2026. We continue active development with bug fixes, new features, and community support. Thank you **t0bst4r** for the original work! ❤️
+> 🔀 **Community Fork** - This is a fork of the original [t0bst4r/home-assistant-matter-hub](https://github.com/t0bst4r/home-assistant-matter-hub), which was discontinued in January 2026. We continue active development with bug fixes, new features, and community support. Thank you **[@t0bst4r](https://github.com/t0bst4r)** for the original work! ❤️
 >
 > **📦 Migrating?** See [Migration Guide](#migration-from-t0bst4r) - your paired devices will continue to work!
 
@@ -104,8 +104,15 @@ of port forwarding etc.
 <details>
 <summary><strong>🧪 Alpha Features (v2.1.0-alpha.x)</strong> - Click to expand</summary>
 
-> [!NOTE]
-> Alpha and Stable are currently in sync. No additional alpha-only features at this time.
+**New in v2.1.0-alpha (testing on `alpha` branch):**
+
+| Feature | Description |
+|---------|-------------|
+| **📋 Bridge Templates / Presets** | 10 predefined bridge templates (All Lights, All Switches, All Sensors, Climate & Covers, Security & Locks, Robot Vacuum Server Mode, Media Players, Google Home Optimized, Alexa-Optimized Covers, Automations & Scripts) — available in both the Create Bridge page and the Bridge Wizard |
+| **🔍 Live Filter Preview** | Filter preview now auto-refreshes on every filter change (debounced 800ms), shows domain → Matter device type mapping hints per entity, and displays contextual warnings (vacuum server mode reminder, large entity count, unsupported domains) |
+| **🩺 Dedicated Diagnostics Per Entity** | New Entity Diagnostics panel in the endpoint detail view showing HA entity ID, current state, key HA attributes (device_class, supported_features, color_modes, etc.), custom name/device type overrides, and all entity mappings (battery, humidity, pressure, power, energy, filter life, rooms) |
+| **🧙 Enhanced Bridge Wizard** | Wizard now has a 4-step flow: Template → Bridge Info → Entity Filter → Review & Create. Selecting a template pre-fills name, icon, filters, and feature flags. "Skip Template" button for custom bridges |
+| **⚡ Multi-Bridge Bulk Operations** | New "Start All", "Stop All", "Restart All" buttons on the Bridges page (shown when 2+ bridges exist). New backend API endpoints for bulk actions and bridge cloning (`POST /bridges/:id/clone`) |
 
 </details>
 
