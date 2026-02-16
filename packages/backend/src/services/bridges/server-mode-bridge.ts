@@ -344,6 +344,21 @@ export class ServerModeBridge {
       const sessions = [...sessionManager.sessions];
       const seenSessionIds = new Set<number>();
 
+      // Check if bridge is commissioned (has fabrics).
+      // If so, treat it as having had an active session even if none is present
+      // in this runtime. This handles the case where the bridge restarts but
+      // the controller (Alexa) never reconnects - orphan detection should still work.
+      const commissioning = this.server.state.commissioning;
+      const hasFabrics =
+        commissioning?.commissioned &&
+        Object.keys(commissioning.fabrics ?? {}).length > 0;
+      if (hasFabrics && !this.hadActiveSession) {
+        this.hadActiveSession = true;
+        this.log.debug(
+          `Subscription health: Bridge is commissioned with fabrics, enabling orphan detection`,
+        );
+      }
+
       let totalSubscriptions = 0;
       for (const session of sessions) {
         const sessionId = session.id;
