@@ -103,20 +103,22 @@ const config: ThermostatServerConfig = {
     const hvacMode = entity.state as ClimateHvacMode;
     const systemMode =
       hvacModeToSystemMode[hvacMode] ?? Thermostat.SystemMode.Off;
-    // For heat-only or cool-only thermostats (e.g. TRVs with auto+heat but no cool),
-    // don't expose SystemMode.Auto — controllers like Alexa interpret Auto as
-    // dual-setpoint and refuse single temperature commands ("keeps temperature
-    // between X and Y"). Map auto → Heat or Cool based on actual capabilities.
+    // Map SystemMode.Auto to the correct mode based on device capabilities.
+    // Matter AutoMode = dual setpoint = HA heat_cool.
+    // HA auto ≠ Matter Auto — it's a single-setpoint mode where the device decides.
     if (systemMode === Thermostat.SystemMode.Auto) {
       const modes = attributes(entity).hvac_modes ?? [];
-      const hasCooling = modes.some(
-        (m) => m === ClimateHvacMode.cool || m === ClimateHvacMode.heat_cool,
-      );
+      const hasHeatCool = modes.includes(ClimateHvacMode.heat_cool);
+
+      // Device supports heat_cool (dual setpoint): keep SystemMode.Auto
+      if (hasHeatCool) {
+        return systemMode;
+      }
+
+      // No heat_cool: map HA auto → Heat/Cool based on device capabilities or action
+      const hasCooling = modes.some((m) => m === ClimateHvacMode.cool);
       const hasHeating = modes.some(
-        (m) =>
-          m === ClimateHvacMode.heat ||
-          m === ClimateHvacMode.heat_cool ||
-          m === ClimateHvacMode.auto,
+        (m) => m === ClimateHvacMode.heat || m === ClimateHvacMode.auto,
       );
       if (hasHeating && !hasCooling) {
         return Thermostat.SystemMode.Heat;
@@ -124,6 +126,12 @@ const config: ThermostatServerConfig = {
       if (hasCooling && !hasHeating) {
         return Thermostat.SystemMode.Cool;
       }
+      // Both heat and cool but no heat_cool: use hvac_action to decide
+      const action = attributes(entity).hvac_action;
+      if (action === ClimateHvacAction.cooling) {
+        return Thermostat.SystemMode.Cool;
+      }
+      return Thermostat.SystemMode.Heat;
     }
     return systemMode;
   },

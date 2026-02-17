@@ -88,6 +88,16 @@ const FullFeaturedBase = Base.with("Heating", "Cooling", "AutoMode").set(
   fullDefaults,
 );
 
+// Heating + Cooling WITHOUT AutoMode. For devices that support both heat and cool
+// but not dual setpoints (no heat_cool mode in HA). Apple Home won't show Auto.
+const heatingAndCoolingDefaults = {
+  ...heatingOnlyDefaults,
+  ...coolingOnlyDefaults,
+};
+const HeatingAndCoolingFeaturedBase = Base.with("Heating", "Cooling").set(
+  heatingAndCoolingDefaults,
+);
+
 export interface ThermostatRunningState {
   heat: boolean;
   cool: boolean;
@@ -188,9 +198,9 @@ function thermostatPreInitialize(self: any): void {
   // heating/cooling.
   self.state.thermostatRunningState = runningStateAllOff;
 
-  // For full HVAC devices (AutoMode enabled): ensure minSetpointDeadBand is set.
-  // thermostatRunningMode: updated for Auto mode only in update().
-  if (self.features.heating && self.features.cooling) {
+  // minSetpointDeadBand only exists with AutoMode feature.
+  // For Heating+Cooling without AutoMode, this property must not be set.
+  if (self.features.autoMode) {
     self.state.minSetpointDeadBand = self.state.minSetpointDeadBand ?? 0;
   }
 
@@ -737,12 +747,43 @@ function copyPrototypeMethods(source: any, target: any) {
     }
   }
 }
+// biome-ignore lint/correctness/noUnusedVariables: Used via copyPrototypeMethods and in ThermostatServer factory
+class HeatingAndCoolingThermostatServerBase extends HeatingAndCoolingFeaturedBase {
+  declare state: HeatingAndCoolingThermostatServerBase.State;
+  static override State = class extends HeatingAndCoolingFeaturedBase.State {
+    config!: ThermostatServerConfig;
+  };
+
+  // Each variant MUST define its own initialize() — see HeatingOnly comment above.
+  override async initialize() {
+    thermostatPreInitialize(this);
+    await super.initialize();
+    await thermostatPostInitialize(this);
+  }
+}
+namespace HeatingAndCoolingThermostatServerBase {
+  export type State = InstanceType<
+    typeof HeatingAndCoolingThermostatServerBase.State
+  >;
+}
+
 copyPrototypeMethods(ThermostatServerBase, HeatingOnlyThermostatServerBase);
 copyPrototypeMethods(ThermostatServerBase, CoolingOnlyThermostatServerBase);
+copyPrototypeMethods(
+  ThermostatServerBase,
+  HeatingAndCoolingThermostatServerBase,
+);
 
 export interface ThermostatServerFeatures {
   heating: boolean;
   cooling: boolean;
+  /**
+   * Enable AutoMode (dual setpoint) feature.
+   * Only set to true if the device supports heat_cool in HA hvac_modes.
+   * Without this, Apple Home won't show the Auto option, preventing
+   * mode flipping on devices that only have single-setpoint 'auto'.
+   */
+  autoMode?: boolean;
 }
 
 /**
@@ -788,10 +829,30 @@ export function ThermostatServer(
   const supportsCooling = features.cooling;
 
   if (supportsHeating && supportsCooling) {
-    // Full features (heating + cooling + auto mode)
-    // IMPORTANT: abs limits → regular limits → setpoints to prevent
-    // validation failures for negative temperatures (e.g. refrigerators).
-    return ThermostatServerBase.set({
+    if (features.autoMode) {
+      // Full features (heating + cooling + auto mode) for heat_cool devices
+      // IMPORTANT: abs limits → regular limits → setpoints to prevent
+      // validation failures for negative temperatures (e.g. refrigerators).
+      return ThermostatServerBase.set({
+        config,
+        absMinHeatSetpointLimit: initialState.minHeatSetpointLimit ?? 0,
+        absMaxHeatSetpointLimit: initialState.maxHeatSetpointLimit ?? 5000,
+        absMinCoolSetpointLimit: initialState.minCoolSetpointLimit ?? 0,
+        absMaxCoolSetpointLimit: initialState.maxCoolSetpointLimit ?? 5000,
+        minHeatSetpointLimit: initialState.minHeatSetpointLimit ?? 0,
+        maxHeatSetpointLimit: initialState.maxHeatSetpointLimit ?? 5000,
+        minCoolSetpointLimit: initialState.minCoolSetpointLimit ?? 0,
+        maxCoolSetpointLimit: initialState.maxCoolSetpointLimit ?? 5000,
+        localTemperature: initialState.localTemperature ?? 2100,
+        occupiedHeatingSetpoint: initialState.occupiedHeatingSetpoint ?? 2000,
+        occupiedCoolingSetpoint: initialState.occupiedCoolingSetpoint ?? 2400,
+        minSetpointDeadBand: 0,
+      });
+    }
+
+    // Heating + Cooling without AutoMode (for ACs with heat+cool but no heat_cool)
+    // Apple Home won't show Auto option, preventing mode flipping issues.
+    return HeatingAndCoolingThermostatServerBase.set({
       config,
       absMinHeatSetpointLimit: initialState.minHeatSetpointLimit ?? 0,
       absMaxHeatSetpointLimit: initialState.maxHeatSetpointLimit ?? 5000,
@@ -804,7 +865,6 @@ export function ThermostatServer(
       localTemperature: initialState.localTemperature ?? 2100,
       occupiedHeatingSetpoint: initialState.occupiedHeatingSetpoint ?? 2000,
       occupiedCoolingSetpoint: initialState.occupiedCoolingSetpoint ?? 2400,
-      minSetpointDeadBand: 0,
     });
   }
 

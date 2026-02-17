@@ -66,7 +66,7 @@ const ClimateDeviceType = (
   supportsHumidity: boolean,
   supportsFanMode: boolean,
   hasBattery: boolean,
-  features: { heating: boolean; cooling: boolean },
+  features: { heating: boolean; cooling: boolean; autoMode?: boolean },
   initialState: InitialThermostatState = {},
 ) => {
   const additionalClusters: ClusterBehavior.Type[] = [];
@@ -226,7 +226,17 @@ export function ClimateDevice(
     supportsHumidity,
     supportsFanMode,
     hasBattery,
-    { heating: supportsHeating, cooling: supportsCooling },
+    {
+      heating: supportsHeating,
+      cooling: supportsCooling,
+      // AutoMode only when device supports heat_cool (dual setpoint).
+      // Devices with only 'auto' (single-setpoint) must NOT get AutoMode —
+      // Apple Home would show Auto and expect dual setpoints, causing mode flipping.
+      autoMode:
+        supportsHeating &&
+        supportsCooling &&
+        attributes.hvac_modes.includes(ClimateHvacMode.heat_cool),
+    },
     initialState,
   ).set({
     homeAssistantEntity,
@@ -254,7 +264,12 @@ export function ClimateDevice(
           }
         : {}),
       localTemperature: initialState.localTemperature ?? null,
-      ...(supportsHeating && supportsCooling ? { minSetpointDeadBand: 0 } : {}),
+      // minSetpointDeadBand only valid with AutoMode (dual setpoint) feature
+      ...(supportsHeating &&
+      supportsCooling &&
+      attributes.hvac_modes.includes(ClimateHvacMode.heat_cool)
+        ? { minSetpointDeadBand: 0 }
+        : {}),
     },
   });
 }
