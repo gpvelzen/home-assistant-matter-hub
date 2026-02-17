@@ -10,6 +10,7 @@ import {
   isEcovacsVacuum,
   isRoomMode,
   isUnnamedRoom,
+  isXiaomiMiotVacuum,
   parseVacuumRooms,
   ROOM_MODE_BASE,
 } from "./parse-vacuum-rooms.js";
@@ -387,6 +388,71 @@ describe("isDreameVacuum", () => {
       rooms: null,
     };
     expect(isDreameVacuum(attributes)).toBe(false);
+  });
+});
+
+describe("room_mapping (Roborock/Xiaomi Miot)", () => {
+  it("should parse room_mapping format", () => {
+    const attributes: VacuumDeviceAttributes = {
+      room_mapping: [
+        [16, "152001108957", "Tvättstuga"],
+        [17, "152001108956", "Kontor"],
+        [18, "152001108958", "Badrum"],
+        [19, "152001066658", "Hall"],
+      ],
+    };
+    const result = parseVacuumRooms(attributes);
+    expect(result).toEqual([
+      { id: 16, name: "Tvättstuga" },
+      { id: 17, name: "Kontor" },
+      { id: 18, name: "Badrum" },
+      { id: 19, name: "Hall" },
+    ]);
+  });
+
+  it("should handle string segment IDs in room_mapping", () => {
+    const attributes: VacuumDeviceAttributes = {
+      room_mapping: [
+        ["16", "cloud1", "Kitchen"],
+        ["17", "cloud2", "Bedroom"],
+      ],
+    };
+    const result = parseVacuumRooms(attributes);
+    expect(result).toEqual([
+      { id: 16, name: "Kitchen" },
+      { id: 17, name: "Bedroom" },
+    ]);
+  });
+
+  it("should prefer rooms/segments/room_list over room_mapping", () => {
+    const attributes: VacuumDeviceAttributes = {
+      rooms: [{ id: 1, name: "FromRooms" }],
+      room_mapping: [[16, "cloud1", "FromMapping"]],
+    };
+    const result = parseVacuumRooms(attributes);
+    expect(result).toEqual([{ id: 1, name: "FromRooms", icon: undefined }]);
+  });
+
+  it("should return empty for invalid room_mapping", () => {
+    const attributes: VacuumDeviceAttributes = {
+      room_mapping: ["not", "valid"],
+    };
+    const result = parseVacuumRooms(attributes);
+    expect(result).toEqual([]);
+  });
+
+  it("should detect Roborock with room_mapping as Xiaomi Miot", () => {
+    const attributes: VacuumDeviceAttributes = {
+      room_mapping: [[16, "cloud1", "Kitchen"]],
+    };
+    expect(isXiaomiMiotVacuum(attributes)).toBe(true);
+  });
+
+  it("should not detect empty room_mapping as Xiaomi Miot", () => {
+    const attributes: VacuumDeviceAttributes = {
+      room_mapping: [],
+    };
+    expect(isXiaomiMiotVacuum(attributes)).toBe(false);
   });
 });
 

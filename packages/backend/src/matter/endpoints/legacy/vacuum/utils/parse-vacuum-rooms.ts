@@ -113,6 +113,34 @@ function parseRoomData(roomsData: unknown): VacuumRoom[] {
 }
 
 /**
+ * Parse Xiaomi Miot / Roborock room_mapping format.
+ * Format: [[segmentId, cloudRoomId, roomName], ...]
+ * Example: [[16, "152001108957", "Kitchen"], [17, "152001108956", "Bedroom"]]
+ */
+function parseRoomMapping(mapping: unknown): VacuumRoom[] {
+  if (!Array.isArray(mapping)) return [];
+
+  return mapping
+    .filter((entry): entry is unknown[] => {
+      return (
+        Array.isArray(entry) &&
+        entry.length >= 3 &&
+        (typeof entry[0] === "number" || typeof entry[0] === "string") &&
+        typeof entry[2] === "string"
+      );
+    })
+    .map((entry) => {
+      const rawId = entry[0];
+      const id =
+        typeof rawId === "string" ? Number.parseInt(rawId, 10) || rawId : rawId;
+      return {
+        id: id as number | string,
+        name: entry[2] as string,
+      };
+    });
+}
+
+/**
  * Regular expression to match generic/unnamed room names.
  * Matches patterns like "Room 1", "Room 7", "Raum 3", etc.
  * These are typically auto-generated names for unmapped/hidden rooms.
@@ -163,6 +191,15 @@ export function parseVacuumRooms(
       }
       return rooms;
     }
+  }
+
+  // Try room_mapping (Xiaomi Miot / Roborock format: [[segmentId, cloudId, name], ...])
+  let mappingRooms = parseRoomMapping(attributes.room_mapping);
+  if (mappingRooms.length > 0) {
+    if (!includeUnnamedRooms) {
+      mappingRooms = mappingRooms.filter((room) => !isUnnamedRoom(room.name));
+    }
+    return mappingRooms;
   }
 
   return [];
@@ -233,6 +270,14 @@ export function getRoomIdFromMode(mode: number): number {
 export function isXiaomiMiotVacuum(
   attributes: VacuumDeviceAttributes,
 ): boolean {
+  // Roborock / Xiaomi Miot vacuums with room_mapping attribute
+  if (
+    Array.isArray(attributes.room_mapping) &&
+    attributes.room_mapping.length > 0
+  ) {
+    return true;
+  }
+
   const sources = [attributes.rooms, attributes.segments, attributes.room_list];
   for (const source of sources) {
     if (

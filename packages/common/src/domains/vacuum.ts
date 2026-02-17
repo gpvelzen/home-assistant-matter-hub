@@ -120,4 +120,9 @@ export interface VacuumDeviceAttributes {
   segments?: VacuumRoomsData;
   /** Alternative attribute name used by some integrations */
   room_list?: VacuumRoomsData;
+  /**
+   * Xiaomi Miot / Roborock room mapping: [[segmentId, cloudRoomId, roomName], ...]
+   * Example: [[16, "152001108957", "Kitchen"], [17, "152001108956", "Bedroom"]]
+   */
+  room_mapping?: unknown[];
 }
