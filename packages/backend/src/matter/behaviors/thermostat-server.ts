@@ -474,18 +474,30 @@ export class ThermostatServerBase extends FullFeaturedBase {
         const isHeatingMode =
           currentMode === Thermostat.SystemMode.Heat ||
           currentMode === Thermostat.SystemMode.EmergencyHeat;
-        // In Auto mode: heating setpoint updates temperature (cooling setpoint is ignored)
-        // In Heat mode: heating setpoint updates temperature
-        // In Cool mode: let coolingSetpointChanging handle this
-        // When Off: skip — temperature changes while off are not forwarded to HA
-        if (!isAutoMode && !isHeatingMode) {
+        const isOff = currentMode === Thermostat.SystemMode.Off;
+
+        if (isOff) {
+          // Auto-resume: setting a temperature while off should turn on the device (#176).
+          // Controllers like Google Home expect "set to 20°C" to work even when off.
+          logger.info(
+            "heatingSetpointChanging: device is off, auto-switching to Heat mode",
+          );
+          const modeAction = config.setSystemMode(
+            Thermostat.SystemMode.Heat,
+            this.agent,
+          );
+          homeAssistant.callAction(modeAction);
+        } else if (!isAutoMode && !isHeatingMode) {
+          // In Auto mode: heating setpoint updates temperature (cooling setpoint is ignored)
+          // In Heat mode: heating setpoint updates temperature
+          // In Cool mode: let coolingSetpointChanging handle this
           logger.debug(
             `heatingSetpointChanging: skipping - not in heating/auto mode (mode=${currentMode}, haMode=${haHvacMode})`,
           );
           return; // Let coolingSetpointChanging handle this
         }
         logger.debug(
-          `heatingSetpointChanging: proceeding - isAutoMode=${isAutoMode}, isHeatingMode=${isHeatingMode}, haMode=${haHvacMode}`,
+          `heatingSetpointChanging: proceeding - isAutoMode=${isAutoMode}, isHeatingMode=${isHeatingMode}, isOff=${isOff}, haMode=${haHvacMode}`,
         );
       }
 
@@ -539,18 +551,30 @@ export class ThermostatServerBase extends FullFeaturedBase {
         const isCoolingMode =
           currentMode === Thermostat.SystemMode.Cool ||
           currentMode === Thermostat.SystemMode.Precooling;
-        // In Auto mode: BOTH heating and cooling setpoint should update temperature (#71)
-        // In Cool mode: cooling setpoint updates temperature
-        // In Heat mode: let heatingSetpointChanging handle this
-        // When Off: skip — temperature changes while off are not forwarded to HA
-        if (!isAutoMode && !isCoolingMode) {
+        const isOff = currentMode === Thermostat.SystemMode.Off;
+
+        if (isOff) {
+          // Auto-resume: setting a temperature while off should turn on the device (#176).
+          // Controllers like Google Home expect "set to 20°C" to work even when off.
+          logger.info(
+            "coolingSetpointChanging: device is off, auto-switching to Cool mode",
+          );
+          const modeAction = this.state.config.setSystemMode(
+            Thermostat.SystemMode.Cool,
+            this.agent,
+          );
+          homeAssistant.callAction(modeAction);
+        } else if (!isAutoMode && !isCoolingMode) {
+          // In Auto mode: BOTH heating and cooling setpoint should update temperature (#71)
+          // In Cool mode: cooling setpoint updates temperature
+          // In Heat mode: let heatingSetpointChanging handle this
           logger.debug(
             `coolingSetpointChanging: skipping - not in cooling/auto mode (mode=${currentMode}, haMode=${haHvacMode})`,
           );
           return; // Let heatingSetpointChanging handle this
         }
         logger.debug(
-          `coolingSetpointChanging: proceeding - isAutoMode=${isAutoMode}, isCoolingMode=${isCoolingMode}, haMode=${haHvacMode}`,
+          `coolingSetpointChanging: proceeding - isAutoMode=${isAutoMode}, isCoolingMode=${isCoolingMode}, isOff=${isOff}, haMode=${haHvacMode}`,
         );
       }
 
