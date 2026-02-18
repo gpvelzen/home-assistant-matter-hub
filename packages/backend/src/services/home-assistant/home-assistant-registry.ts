@@ -4,9 +4,11 @@ import type {
   HomeAssistantEntityRegistry,
   HomeAssistantEntityState,
 } from "@home-assistant-matter-hub/common";
+import { Logger } from "@matter/general";
 import { getStates } from "home-assistant-js-websocket";
 import { fromPairs, keyBy, keys, uniq, values } from "lodash-es";
 import { Service } from "../../core/ioc/service.js";
+import { withRetry } from "../../utils/retry.js";
 import {
   getAreaRegistry,
   getDeviceRegistry,
@@ -18,6 +20,8 @@ import type {
   HomeAssistantClient,
   HomeAssistantClientProps,
 } from "./home-assistant-client.js";
+
+const logger = Logger.get("HomeAssistantRegistry");
 
 export type HomeAssistantDevices = Record<string, HomeAssistantDeviceRegistry>;
 export type HomeAssistantEntities = Record<string, HomeAssistantEntityRegistry>;
@@ -72,8 +76,12 @@ export class HomeAssistantRegistry extends Service {
     this.disableAutoRefresh();
 
     this.autoRefresh = setInterval(async () => {
-      await this.reload();
-      onRefresh();
+      try {
+        await this.reload();
+        onRefresh();
+      } catch (e) {
+        logger.warn("Failed to refresh registry, will retry next interval:", e);
+      }
     }, this.options.refreshInterval * 1000);
   }
 
@@ -85,6 +93,20 @@ export class HomeAssistantRegistry extends Service {
   }
 
   private async reload() {
+    await withRetry(() => this.fetchRegistries(), {
+      maxAttempts: 5,
+      baseDelayMs: 2000,
+      maxDelayMs: 15000,
+      onRetry: (attempt, error, delayMs) => {
+        logger.warn(
+          `Registry fetch failed (attempt ${attempt}), retrying in ${delayMs}ms:`,
+          error,
+        );
+      },
+    });
+  }
+
+  private async fetchRegistries() {
     const connection = this.client.connection;
     const entityRegistry = await getRegistry(connection);
     entityRegistry.forEach((e) => {

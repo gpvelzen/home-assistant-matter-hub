@@ -10,10 +10,25 @@ import { EntityIsolationService } from "../../services/bridges/entity-isolation-
 import { HomeAssistantRegistry } from "../../services/home-assistant/home-assistant-registry.js";
 import type { StartOptions } from "./start-options.js";
 
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null) {
+    const obj = error as Record<string, unknown>;
+    // HA WebSocket error: { type: 'result', success: false, error: { code: N, message: '...' } }
+    if (typeof obj.error === "object" && obj.error !== null) {
+      const inner = obj.error as Record<string, unknown>;
+      if (typeof inner.message === "string") return inner.message;
+    }
+    if (typeof obj.message === "string") return obj.message;
+  }
+  return String(error);
+}
+
 // Check if an error should be suppressed (not crash the process)
 function shouldSuppressError(error: unknown): boolean {
-  const msg = error instanceof Error ? error.message : String(error);
+  const msg = extractErrorMessage(error);
   return (
+    msg.includes("Connection lost") ||
     msg.includes("Endpoint storage inaccessible") ||
     msg.includes("Invalid intervalMs") ||
     msg.includes("generalDiagnostics") ||
