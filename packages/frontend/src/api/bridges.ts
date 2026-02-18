@@ -69,3 +69,46 @@ export async function updateBridgePriorities(
     throw new Error("Failed to update priorities");
   }
 }
+
+export async function startAllBridges(): Promise<{
+  success: boolean;
+  count: number;
+}> {
+  const res = await fetch("api/matter/bridges/actions/start-all", {
+    method: "POST",
+  });
+  return res.json();
+}
+
+export async function stopAllBridges(): Promise<{
+  success: boolean;
+  count: number;
+}> {
+  const res = await fetch("api/matter/bridges/actions/stop-all", {
+    method: "POST",
+  });
+  return res.json();
+}
+
+export async function restartAllBridges(): Promise<{
+  success: boolean;
+  count: number;
+}> {
+  const res = await fetch("api/matter/bridges/actions/restart-all", {
+    method: "POST",
+  });
+  return res.json();
+}
+
+export async function cloneBridge(
+  bridgeId: string,
+): Promise<BridgeDataWithMetadata> {
+  const res = await fetch(`api/matter/bridges/${bridgeId}/clone`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Clone failed" }));
+    throw new Error((err as { error?: string }).error ?? "Clone failed");
+  }
+  return res.json() as Promise<BridgeDataWithMetadata>;
+}

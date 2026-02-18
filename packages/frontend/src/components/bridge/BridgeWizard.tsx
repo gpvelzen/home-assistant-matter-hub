@@ -1,4 +1,7 @@
 import {
+  type BridgeFeatureFlags,
+  type BridgeIconType,
+  type BridgeTemplate,
   type CreateBridgeRequest,
   type HomeAssistantMatcher,
   HomeAssistantMatcherType,
@@ -32,6 +35,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useCallback, useEffect, useState } from "react";
 import { createBridge as apiCreateBridge } from "../../api/bridges.js";
+import { BridgeTemplateSelector } from "./BridgeTemplateSelector.js";
 
 interface BridgeWizardProps {
   open: boolean;
@@ -43,19 +47,24 @@ interface WizardBridge {
   name: string;
   port: number;
   serverMode: boolean;
+  icon?: BridgeIconType;
+  featureFlags?: BridgeFeatureFlags;
   filter: {
     include: HomeAssistantMatcher[];
     exclude: HomeAssistantMatcher[];
   };
 }
 
-const steps = ["Bridge Info", "Entity Filter", "Review & Create"];
+const steps = ["Template", "Bridge Info", "Entity Filter", "Review & Create"];
 
 export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [nextPort, setNextPort] = useState(5540);
   const [bridges, setBridges] = useState<WizardBridge[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<
+    BridgeTemplate | undefined
+  >();
   const [currentBridge, setCurrentBridge] = useState<WizardBridge>({
     name: "",
     port: 5540,
@@ -85,6 +94,7 @@ export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
       fetchNextPort();
       setActiveStep(0);
       setBridges([]);
+      setSelectedTemplate(undefined);
       setCurrentBridge({
         name: "",
         port: nextPort,
@@ -98,38 +108,81 @@ export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
     }
   }, [open, fetchNextPort, nextPort]);
 
+  const applyTemplate = useCallback((template: BridgeTemplate | null) => {
+    setSelectedTemplate(template ?? undefined);
+    if (template) {
+      setCurrentBridge((prev) => ({
+        ...prev,
+        name: template.name,
+        serverMode: template.featureFlags?.serverMode ?? false,
+        icon: template.icon,
+        featureFlags: template.featureFlags,
+        filter: { ...template.filter },
+      }));
+      // Pre-fill entity pattern from template filter
+      const includes = template.filter.include;
+      if (includes.length > 0) {
+        setUseWildcard(false);
+        setEntityPattern(includes.map((m) => m.value).join(", "));
+      }
+      const excludes = template.filter.exclude;
+      setExcludePattern(excludes.map((m) => m.value).join(", "));
+    } else {
+      setCurrentBridge((prev) => ({
+        ...prev,
+        name: "",
+        serverMode: false,
+        icon: undefined,
+        featureFlags: undefined,
+        filter: { include: [], exclude: [] },
+      }));
+      setUseWildcard(true);
+      setEntityPattern("*");
+      setExcludePattern("");
+    }
+  }, []);
+
   const handleNext = () => {
     if (activeStep === 0) {
+      // Template step — just proceed
+      setError(null);
+    }
+    if (activeStep === 1) {
       if (!currentBridge.name.trim()) {
         setError("Please enter a bridge name");
         return;
       }
       setError(null);
     }
-    if (activeStep === 1) {
-      const includePatterns = useWildcard
-        ? [entityPattern || "*"]
-        : entityPattern
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-      const excludePatterns = excludePattern
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+    if (activeStep === 2) {
+      let includeMatchers: HomeAssistantMatcher[];
+      let excludeMatchers: HomeAssistantMatcher[];
 
-      const includeMatchers: HomeAssistantMatcher[] = includePatterns.map(
-        (pattern) => ({
+      if (selectedTemplate) {
+        // Use template filters directly
+        includeMatchers = [...selectedTemplate.filter.include];
+        excludeMatchers = [...selectedTemplate.filter.exclude];
+      } else {
+        const includePatterns = useWildcard
+          ? [entityPattern || "*"]
+          : entityPattern
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+        const excludePatterns = excludePattern
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        includeMatchers = includePatterns.map((pattern) => ({
           type: HomeAssistantMatcherType.Pattern,
           value: pattern,
-        }),
-      );
-      const excludeMatchers: HomeAssistantMatcher[] = excludePatterns.map(
-        (pattern) => ({
+        }));
+        excludeMatchers = excludePatterns.map((pattern) => ({
           type: HomeAssistantMatcherType.Pattern,
           value: pattern,
-        }),
-      );
+        }));
+      }
 
       setCurrentBridge((prev) => ({
         ...prev,
@@ -151,6 +204,7 @@ export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
     await createBridgeAsync();
     const newPort = nextPort + bridges.length + 1;
     setBridges((prev) => [...prev, currentBridge]);
+    setSelectedTemplate(undefined);
     setCurrentBridge({
       name: "",
       port: newPort,
@@ -167,13 +221,17 @@ export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
     setLoading(true);
     setError(null);
     try {
+      const featureFlags: BridgeFeatureFlags = {
+        ...currentBridge.featureFlags,
+        ...(currentBridge.serverMode ? { serverMode: true } : {}),
+      };
+      const hasFlags = Object.keys(featureFlags).length > 0;
       const request: CreateBridgeRequest = {
         name: currentBridge.name,
         port: currentBridge.port,
         filter: currentBridge.filter,
-        featureFlags: currentBridge.serverMode
-          ? { serverMode: true }
-          : undefined,
+        featureFlags: hasFlags ? featureFlags : undefined,
+        icon: currentBridge.icon,
       };
       await apiCreateBridge(request);
       return true;
@@ -193,10 +251,27 @@ export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
     }
   };
 
+  const renderTemplateStep = () => (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="body1" gutterBottom>
+        Choose a template to get started quickly, or skip to create a custom
+        bridge.
+      </Typography>
+      <Box sx={{ mt: 2 }}>
+        <BridgeTemplateSelector
+          selectedTemplate={selectedTemplate?.id}
+          onSelect={applyTemplate}
+        />
+      </Box>
+    </Box>
+  );
+
   const renderStep0 = () => (
     <Box sx={{ mt: 2 }}>
       <Typography variant="body1" gutterBottom>
-        Let's set up a new Matter bridge. First, give it a name and port.
+        {selectedTemplate
+          ? `Template "${selectedTemplate.name}" applied. Customize the name and port below.`
+          : "Give your bridge a name and port."}
       </Typography>
       <TextField
         fullWidth
@@ -276,21 +351,35 @@ export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
   const renderStep1 = () => (
     <Box sx={{ mt: 2 }}>
       <Typography variant="body1" gutterBottom>
-        Configure which entities should be included in this bridge.
+        {selectedTemplate
+          ? `Filter is pre-configured from the "${selectedTemplate.name}" template. You can adjust it below.`
+          : "Configure which entities should be included in this bridge."}
       </Typography>
-      <FormControlLabel
-        control={
-          <Switch
-            checked={useWildcard}
-            onChange={(e) => setUseWildcard(e.target.checked)}
-          />
-        }
-        label="Include all entities (wildcard)"
-      />
+      {!selectedTemplate && (
+        <FormControlLabel
+          control={
+            <Switch
+              checked={useWildcard}
+              onChange={(e) => setUseWildcard(e.target.checked)}
+            />
+          }
+          label="Include all entities (wildcard)"
+        />
+      )}
       <TextField
         fullWidth
-        label={useWildcard ? "Include Pattern" : "Entity IDs (comma-separated)"}
-        value={entityPattern}
+        label={
+          useWildcard && !selectedTemplate
+            ? "Include Pattern"
+            : "Entity Filters"
+        }
+        value={
+          selectedTemplate
+            ? selectedTemplate.filter.include
+                .map((m) => `${m.type}:${m.value}`)
+                .join(", ")
+            : entityPattern
+        }
         onChange={(e) => setEntityPattern(e.target.value)}
         margin="normal"
         placeholder={
@@ -299,76 +388,115 @@ export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
             : "light.living_room, switch.kitchen"
         }
         helperText={
-          useWildcard
-            ? "Use * for all, or patterns like light.*, switch.*"
-            : "Enter specific entity IDs separated by commas"
+          selectedTemplate
+            ? "Pre-configured by template. Edit in the full editor after creation."
+            : useWildcard
+              ? "Use * for all, or patterns like light.*, switch.*"
+              : "Enter specific entity IDs separated by commas"
         }
+        disabled={!!selectedTemplate}
       />
-      <TextField
-        fullWidth
-        label="Exclude Patterns (optional)"
-        value={excludePattern}
-        onChange={(e) => setExcludePattern(e.target.value)}
-        margin="normal"
-        placeholder="sensor.*, binary_sensor.*"
-        helperText="Patterns to exclude, comma-separated"
-      />
-    </Box>
-  );
-
-  const renderStep2 = () => (
-    <Box sx={{ mt: 2 }}>
-      <Typography variant="body1" gutterBottom>
-        Review your bridge configuration:
-      </Typography>
-      <Card variant="outlined" sx={{ mt: 2 }}>
-        <CardContent>
-          <Box display="flex" alignItems="center" gap={1} mb={1}>
-            <DevicesIcon />
-            <Typography variant="h6">{currentBridge.name}</Typography>
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            Port: {currentBridge.port}
-          </Typography>
-          {currentBridge.serverMode && (
-            <Chip
-              icon={<SmartToyIcon />}
-              label="Server Mode"
-              color="primary"
-              size="small"
-              sx={{ mt: 1 }}
-            />
-          )}
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Include:{" "}
-            {currentBridge.filter.include.length > 0
-              ? currentBridge.filter.include.map((m) => m.value).join(", ")
-              : entityPattern || "*"}
-          </Typography>
-          {error && (
-            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-              {error}
-            </Typography>
-          )}
-          {excludePattern && (
-            <Typography variant="body2" color="text.secondary">
-              Exclude: {excludePattern}
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
-      {bridges.length > 0 && (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="subtitle2">
-            {bridges.length} bridge(s) already created in this session
-          </Typography>
-        </Box>
+      {!selectedTemplate && (
+        <TextField
+          fullWidth
+          label="Exclude Patterns (optional)"
+          value={excludePattern}
+          onChange={(e) => setExcludePattern(e.target.value)}
+          margin="normal"
+          placeholder="sensor.*, binary_sensor.*"
+          helperText="Patterns to exclude, comma-separated"
+        />
       )}
     </Box>
   );
 
+  const renderStep2 = () => {
+    const flagEntries = Object.entries(currentBridge.featureFlags ?? {}).filter(
+      ([, v]) => v === true,
+    );
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="body1" gutterBottom>
+          Review your bridge configuration:
+        </Typography>
+        <Card variant="outlined" sx={{ mt: 2 }}>
+          <CardContent>
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <DevicesIcon />
+              <Typography variant="h6">{currentBridge.name}</Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              Port: {currentBridge.port}
+            </Typography>
+            {selectedTemplate && (
+              <Chip
+                label={`Template: ${selectedTemplate.name}`}
+                size="small"
+                color="info"
+                variant="outlined"
+                sx={{ mt: 1, mr: 0.5 }}
+              />
+            )}
+            {currentBridge.serverMode && (
+              <Chip
+                icon={<SmartToyIcon />}
+                label="Server Mode"
+                color="primary"
+                size="small"
+                sx={{ mt: 1 }}
+              />
+            )}
+            {flagEntries.length > 0 && (
+              <Box display="flex" gap={0.5} flexWrap="wrap" mt={1}>
+                {flagEntries
+                  .filter(([key]) => key !== "serverMode")
+                  .map(([key]) => (
+                    <Chip
+                      key={key}
+                      label={key}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: "0.7rem", height: 22 }}
+                    />
+                  ))}
+              </Box>
+            )}
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Include:{" "}
+              {currentBridge.filter.include.length > 0
+                ? currentBridge.filter.include
+                    .map((m) => `${m.type}:${m.value}`)
+                    .join(", ")
+                : entityPattern || "*"}
+            </Typography>
+            {error && (
+              <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                {error}
+              </Typography>
+            )}
+            {(excludePattern || currentBridge.filter.exclude.length > 0) && (
+              <Typography variant="body2" color="text.secondary">
+                Exclude:{" "}
+                {currentBridge.filter.exclude.length > 0
+                  ? currentBridge.filter.exclude.map((m) => m.value).join(", ")
+                  : excludePattern}
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+        {bridges.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2">
+              {bridges.length} bridge(s) already created in this session
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
           <SettingsIcon />
@@ -383,9 +511,10 @@ export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
             </Step>
           ))}
         </Stepper>
-        {activeStep === 0 && renderStep0()}
-        {activeStep === 1 && renderStep1()}
-        {activeStep === 2 && renderStep2()}
+        {activeStep === 0 && renderTemplateStep()}
+        {activeStep === 1 && renderStep0()}
+        {activeStep === 2 && renderStep1()}
+        {activeStep === 3 && renderStep2()}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} disabled={loading}>
@@ -408,7 +537,7 @@ export function BridgeWizard({ open, onClose, onComplete }: BridgeWizardProps) {
             endIcon={<ArrowForwardIcon />}
             disabled={loading}
           >
-            Next
+            {activeStep === 0 && !selectedTemplate ? "Skip Template" : "Next"}
           </Button>
         )}
         {activeStep === steps.length - 1 && (

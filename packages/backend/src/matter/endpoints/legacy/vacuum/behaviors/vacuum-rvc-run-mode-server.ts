@@ -17,6 +17,7 @@ import {
   getRoomIdFromMode,
   getRoomModeValue,
   isDreameVacuum,
+  isEcovacsVacuum,
   isXiaomiMiotVacuum,
   parseVacuumRooms,
 } from "../utils/parse-vacuum-rooms.js";
@@ -164,6 +165,26 @@ const vacuumRvcRunModeConfig = {
             };
           }
 
+          // Ecovacs/Deebot vacuums use vacuum.send_command with spot_area
+          // Params must be a dict (not a list) with comma-separated room IDs as string
+          if (isEcovacsVacuum(attributes)) {
+            const roomIdStr = roomIds.join(",");
+            logger.info(
+              `Ecovacs vacuum: Using spot_area for rooms: ${roomIdStr}`,
+            );
+            return {
+              action: "vacuum.send_command",
+              data: {
+                command: "spot_area",
+                params: {
+                  mapID: 0,
+                  cleanings: 1,
+                  rooms: roomIdStr,
+                },
+              },
+            };
+          }
+
           // Unknown vacuum type - fall back to regular start.
           // app_segment_clean is Roborock-specific and will fail on other
           // integrations (e.g. Ecovacs/Deebot rejects list params).
@@ -252,6 +273,25 @@ const vacuumRvcRunModeConfig = {
           data: {
             command: "app_segment_clean",
             params: [commandId],
+          },
+        };
+      }
+
+      // Ecovacs/Deebot vacuums use vacuum.send_command with spot_area
+      if (isEcovacsVacuum(attributes)) {
+        const roomIdStr = String(commandId);
+        logger.info(
+          `Ecovacs vacuum: Using spot_area for room ${room.name} (id: ${roomIdStr})`,
+        );
+        return {
+          action: "vacuum.send_command",
+          data: {
+            command: "spot_area",
+            params: {
+              mapID: 0,
+              cleanings: 1,
+              rooms: roomIdStr,
+            },
           },
         };
       }

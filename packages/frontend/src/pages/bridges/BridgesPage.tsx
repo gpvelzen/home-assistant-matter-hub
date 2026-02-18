@@ -1,12 +1,26 @@
-import { Add, AutoFixHigh, Download, Upload } from "@mui/icons-material";
+import {
+  Add,
+  AutoFixHigh,
+  Download,
+  PlayArrow,
+  RestartAlt,
+  Stop,
+  Upload,
+} from "@mui/icons-material";
 import Backdrop from "@mui/material/Backdrop";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { exportAllBridges } from "../../api/bridge-export.js";
+import {
+  restartAllBridges,
+  startAllBridges,
+  stopAllBridges,
+} from "../../api/bridges.js";
 import { BridgeImportDialog } from "../../components/bridge/BridgeImportDialog.js";
 import { BridgeList } from "../../components/bridge/BridgeList";
 import { BridgeWizard } from "../../components/bridge/BridgeWizard.js";
@@ -24,6 +38,7 @@ export const BridgesPage = () => {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = useCallback(async () => {
@@ -62,6 +77,38 @@ export const BridgesPage = () => {
     dispatch(loadBridges());
   }, [dispatch]);
 
+  const handleBulkAction = useCallback(
+    async (action: "start" | "stop" | "restart") => {
+      setBulkLoading(true);
+      try {
+        const labels = {
+          start: "Started",
+          stop: "Stopped",
+          restart: "Restarted",
+        };
+        const fns = {
+          start: startAllBridges,
+          stop: stopAllBridges,
+          restart: restartAllBridges,
+        };
+        const result = await fns[action]();
+        notifications.show({
+          message: `${labels[action]} ${result.count} bridge(s)`,
+          severity: "success",
+        });
+        dispatch(loadBridges());
+      } catch (e) {
+        notifications.show({
+          message: e instanceof Error ? e.message : `${action} failed`,
+          severity: "error",
+        });
+      } finally {
+        setBulkLoading(false);
+      }
+    },
+    [notifications, dispatch],
+  );
+
   useEffect(() => {
     if (bridgeError) {
       notifications.show({
@@ -75,9 +122,9 @@ export const BridgesPage = () => {
     <>
       <Backdrop
         sx={(theme) => ({ zIndex: theme.zIndex.drawer + 1 })}
-        open={isLoading}
+        open={isLoading || bulkLoading}
       >
-        {isLoading && <CircularProgress color="inherit" />}
+        {(isLoading || bulkLoading) && <CircularProgress color="inherit" />}
       </Backdrop>
 
       <Stack spacing={4}>
@@ -90,6 +137,41 @@ export const BridgesPage = () => {
               gap={1}
               paddingTop={{ xs: 1, sm: 0 }}
             >
+              {bridges.length > 1 && (
+                <>
+                  <Button
+                    onClick={() => handleBulkAction("start")}
+                    startIcon={<PlayArrow />}
+                    variant="outlined"
+                    size="small"
+                    color="success"
+                    disabled={bulkLoading}
+                  >
+                    Start All
+                  </Button>
+                  <Button
+                    onClick={() => handleBulkAction("stop")}
+                    startIcon={<Stop />}
+                    variant="outlined"
+                    size="small"
+                    color="error"
+                    disabled={bulkLoading}
+                  >
+                    Stop All
+                  </Button>
+                  <Button
+                    onClick={() => handleBulkAction("restart")}
+                    startIcon={<RestartAlt />}
+                    variant="outlined"
+                    size="small"
+                    color="warning"
+                    disabled={bulkLoading}
+                  >
+                    Restart All
+                  </Button>
+                  <Divider orientation="vertical" flexItem />
+                </>
+              )}
               <Button
                 onClick={handleImportClick}
                 startIcon={<Upload />}

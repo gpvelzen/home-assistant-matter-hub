@@ -2,11 +2,17 @@ import {
   ClusterId,
   type EndpointData,
 } from "@home-assistant-matter-hub/common";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import LinkIcon from "@mui/icons-material/Link";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
@@ -15,6 +21,7 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useMemo } from "react";
 
@@ -22,7 +29,262 @@ export interface EndpointStateProps {
   endpoint: EndpointData;
 }
 
+interface HaEntityDiag {
+  entityId: string;
+  haState: string;
+  haAttributes: Record<string, unknown>;
+  isUnavailable: boolean;
+  mappings: { label: string; entity: string }[];
+  customName?: string;
+  matterDeviceType?: string;
+}
+
 const ignoredBehaviors = [ClusterId.homeAssistantEntity];
+
+const extractHaDiagnostics = (
+  state: Record<string, unknown>,
+): HaEntityDiag | null => {
+  const ha = state.homeAssistantEntity as
+    | {
+        entity?: {
+          entity_id?: string;
+          state?: { state?: string; attributes?: Record<string, unknown> };
+        };
+        mapping?: Record<string, unknown>;
+        customName?: string;
+      }
+    | undefined;
+
+  if (!ha?.entity?.entity_id) return null;
+
+  const entityId = ha.entity.entity_id;
+  const haState = ha.entity.state?.state ?? "unknown";
+  const haAttributes = ha.entity.state?.attributes ?? {};
+  const isUnavailable = haState === "unavailable" || haState === "unknown";
+
+  const mappings: { label: string; entity: string }[] = [];
+  const mapping = ha.mapping;
+  if (mapping) {
+    if (typeof mapping.batteryEntity === "string")
+      mappings.push({ label: "Battery", entity: mapping.batteryEntity });
+    if (typeof mapping.humidityEntity === "string")
+      mappings.push({ label: "Humidity", entity: mapping.humidityEntity });
+    if (typeof mapping.pressureEntity === "string")
+      mappings.push({ label: "Pressure", entity: mapping.pressureEntity });
+    if (typeof mapping.powerEntity === "string")
+      mappings.push({ label: "Power", entity: mapping.powerEntity });
+    if (typeof mapping.energyEntity === "string")
+      mappings.push({ label: "Energy", entity: mapping.energyEntity });
+    if (typeof mapping.filterLifeEntity === "string")
+      mappings.push({
+        label: "Filter Life",
+        entity: mapping.filterLifeEntity,
+      });
+    if (typeof mapping.cleaningModeEntity === "string")
+      mappings.push({
+        label: "Cleaning Mode",
+        entity: mapping.cleaningModeEntity,
+      });
+    if (Array.isArray(mapping.roomEntities) && mapping.roomEntities.length > 0)
+      mappings.push({
+        label: "Rooms",
+        entity: (mapping.roomEntities as string[]).join(", "),
+      });
+  }
+
+  return {
+    entityId,
+    haState,
+    haAttributes,
+    isUnavailable,
+    mappings,
+    customName: ha.customName as string | undefined,
+    matterDeviceType:
+      typeof mapping?.matterDeviceType === "string"
+        ? mapping.matterDeviceType
+        : undefined,
+  };
+};
+
+const EntityDiagnosticsPanel = ({ endpoint }: { endpoint: EndpointData }) => {
+  const diag = useMemo(
+    () => extractHaDiagnostics(endpoint.state as Record<string, unknown>),
+    [endpoint.state],
+  );
+
+  if (!diag) return null;
+
+  const importantAttrs = [
+    "device_class",
+    "supported_features",
+    "supported_color_modes",
+    "color_mode",
+    "brightness",
+    "color_temp",
+    "hvac_modes",
+    "hvac_mode",
+    "hvac_action",
+    "current_temperature",
+    "temperature",
+    "fan_speed",
+    "fan_speed_list",
+    "volume_level",
+    "is_volume_muted",
+    "source",
+    "source_list",
+    "current_position",
+    "current_tilt_position",
+    "battery_level",
+    "unit_of_measurement",
+    "state_class",
+  ];
+
+  const relevantAttrs = Object.entries(diag.haAttributes).filter(
+    ([key]) => importantAttrs.includes(key) || key === "friendly_name",
+  );
+
+  return (
+    <Paper
+      sx={{ p: 2, mb: 2, bgcolor: "background.default" }}
+      variant="outlined"
+    >
+      <Stack spacing={1.5}>
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography variant="subtitle2" fontWeight={600}>
+            Home Assistant Entity
+          </Typography>
+          {diag.isUnavailable ? (
+            <Chip
+              icon={<WarningAmberIcon />}
+              label={diag.haState}
+              size="small"
+              color="warning"
+              variant="outlined"
+            />
+          ) : (
+            <Chip
+              icon={<CheckCircleIcon />}
+              label={diag.haState}
+              size="small"
+              color="success"
+              variant="outlined"
+            />
+          )}
+        </Box>
+
+        <TableContainer>
+          <Table size="small">
+            <TableBody>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 500, width: "35%" }}>
+                  Entity ID
+                </TableCell>
+                <TableCell>
+                  <Typography fontFamily="monospace" fontSize="0.85em">
+                    {diag.entityId}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 500 }}>HA State</TableCell>
+                <TableCell>
+                  <Typography fontFamily="monospace" fontSize="0.85em">
+                    {diag.haState}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+              {diag.customName && (
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 500 }}>Custom Name</TableCell>
+                  <TableCell>{diag.customName}</TableCell>
+                </TableRow>
+              )}
+              {diag.matterDeviceType && (
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 500 }}>
+                    Device Type Override
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={diag.matterDeviceType}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {relevantAttrs.length > 0 && (
+          <>
+            <Divider />
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={600}
+            >
+              Key HA Attributes
+            </Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableBody>
+                  {relevantAttrs.map(([key, value]) => (
+                    <TableRow key={key}>
+                      <TableCell
+                        sx={{
+                          fontWeight: 500,
+                          width: "35%",
+                          fontSize: "0.8em",
+                        }}
+                      >
+                        {key}
+                      </TableCell>
+                      <TableCell>
+                        <Typography fontFamily="monospace" fontSize="0.8em">
+                          {typeof value === "object"
+                            ? JSON.stringify(value)
+                            : String(value)}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </>
+        )}
+
+        {diag.mappings.length > 0 && (
+          <>
+            <Divider />
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={600}
+            >
+              Entity Mappings
+            </Typography>
+            <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+              {diag.mappings.map((m) => (
+                <Tooltip key={m.label} title={m.entity}>
+                  <Chip
+                    icon={<LinkIcon />}
+                    label={`${m.label}: ${m.entity}`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: "0.75rem" }}
+                  />
+                </Tooltip>
+              ))}
+            </Stack>
+          </>
+        )}
+      </Stack>
+    </Paper>
+  );
+};
 
 export const EndpointState = (props: EndpointStateProps) => {
   const allBehaviors = useMemo(
@@ -48,6 +310,8 @@ export const EndpointState = (props: EndpointStateProps) => {
 
   return (
     <>
+      <EntityDiagnosticsPanel endpoint={props.endpoint} />
+
       <Paper sx={{ p: 2, mb: 2 }} variant="outlined">
         <Stack spacing={2}>
           <Stack

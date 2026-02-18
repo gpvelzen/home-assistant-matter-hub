@@ -9,6 +9,41 @@ Robot vacuums are exposed as Matter **Robotic Vacuum Cleaner** devices with the 
 - **RVC Clean Mode** - Cleaning type selection (Sweeping, Mopping, etc.)
 - **Power Source** - Battery level (if available)
 
+## Cleaning Modes
+
+The RVC Clean Mode cluster allows selecting the cleaning type. This is auto-enabled for Dreame and Ecovacs vacuums, and can be manually configured for other brands.
+
+### Supported Cleaning Modes
+
+| Mode | Matter Tag | Description |
+|------|-----------|-------------|
+| Sweeping | Vacuum | Dry vacuum only |
+| Mopping | Mop | Wet mop only |
+| Sweeping and mopping | DeepClean | Vacuum and mop simultaneously |
+| Mopping after sweeping | VacuumThenMop | Vacuum first, then mop |
+
+### Auto-Detection (Dreame)
+
+For Dreame vacuums, the cleaning mode entity is automatically derived from the vacuum entity ID:
+- `vacuum.r2d2` → `select.r2d2_cleaning_mode`
+
+No manual configuration is needed unless the entity naming differs (e.g., special characters in the vacuum name).
+
+### Manual Configuration (Ecovacs, Others)
+
+For vacuums where the cleaning mode entity can't be auto-detected (Ecovacs, or Dreame with non-standard naming), you need to configure it manually:
+
+1. Go to your **bridge settings** → **Entity Mappings**
+2. **Edit your vacuum entity** (e.g., `vacuum.t20_omni`)
+3. Set **Cleaning Mode Entity** to the select entity that controls the cleaning mode (e.g., `select.t20_omni_betriebsmodus`)
+4. **Restart the bridge**
+
+After configuration, your controller (Apple Home, Alexa) should show the available cleaning mode options.
+
+:::{tip}
+To find the correct select entity, look in Home Assistant for a `select.*` entity belonging to your vacuum device that has options like "Vacuum", "Mop", "Vacuum and mop", etc. The naming varies by brand and language.
+:::
+
 ## Server Mode (Recommended for Apple Home & Alexa)
 
 :::{important}
@@ -107,13 +142,13 @@ Server Mode was added specifically to fix these issues. It exposes the vacuum as
 
 Room selection works with any integration that exposes room data as attributes:
 
-| Integration | Room Attribute | Notes |
-|-------------|---------------|-------|
-| Roborock (Official) | Button entities | Use Entity Mapping UI (see below) |
-| Roborock (Xiaomi Miot) | `rooms` or `segments` | Native support |
-| Dreame | `rooms` | Nested format with map name |
-| Xiaomi | `rooms` | May require custom integration |
-| Ecovacs | `rooms` | Varies by model |
+| Integration | Room Attribute | Cleaning Modes | Notes |
+|-------------|---------------|----------------|-------|
+| Roborock (Official) | Button entities | — | Use Entity Mapping UI (see below) |
+| Roborock (Xiaomi Miot) | `rooms` or `segments` | — | Native support |
+| Dreame | `rooms` | Auto-detected | Nested format with map name |
+| Xiaomi | `rooms` | — | May require custom integration |
+| Ecovacs | `rooms` | Via `cleaningModeEntity` | Set cleaning mode entity in Entity Mapping |
 
 ### Roborock (Official Integration)
 

@@ -1,7 +1,15 @@
-import type { FailedEntity } from "@home-assistant-matter-hub/common";
+import type {
+  BridgeDataWithMetadata,
+  EndpointData,
+  FailedEntity,
+} from "@home-assistant-matter-hub/common";
+import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import WarningIcon from "@mui/icons-material/Warning";
 import Alert from "@mui/material/Alert";
+import AlertTitle from "@mui/material/AlertTitle";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import Collapse from "@mui/material/Collapse";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -10,8 +18,9 @@ import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
+import { updateBridge } from "../../api/bridges.ts";
 import { Breadcrumbs } from "../../components/breadcrumbs/Breadcrumbs.tsx";
 import { BridgeDetails } from "../../components/bridge/BridgeDetails.tsx";
 import { BridgeStatusHint } from "../../components/bridge/BridgeStatusHint.tsx";
@@ -145,6 +154,8 @@ export const BridgeDetailsPage = () => {
         <FailedEntitiesAlert failedEntities={bridge.failedEntities} />
       )}
 
+      <ServerModeRecommendation bridge={bridge} devices={devices} />
+
       <MemoizedBridgeDetails bridge={bridge} />
 
       {devices && <DiagnosticsCard devices={devices} />}
@@ -171,5 +182,115 @@ export const BridgeDetailsPage = () => {
         </Stack>
       )}
     </Stack>
+  );
+};
+
+function hasVacuumEndpoint(endpoint: EndpointData): boolean {
+  if (endpoint.type.name === "RoboticVacuumCleaner") {
+    return true;
+  }
+  return endpoint.parts.some(hasVacuumEndpoint);
+}
+
+function countDeviceEndpoints(endpoint: EndpointData): number {
+  if (endpoint.type.name === "Aggregator") {
+    return endpoint.parts.length;
+  }
+  let count = 0;
+  for (const part of endpoint.parts) {
+    count += countDeviceEndpoints(part);
+  }
+  return count;
+}
+
+const ServerModeRecommendation = ({
+  bridge,
+  devices,
+}: {
+  bridge: BridgeDataWithMetadata;
+  devices: EndpointData | undefined;
+}) => {
+  const notifications = useNotifications();
+  const [enabling, setEnabling] = useState(false);
+
+  const shouldShow = useMemo(() => {
+    if (!devices) return false;
+    if (bridge.featureFlags?.serverMode) return false;
+    return hasVacuumEndpoint(devices);
+  }, [devices, bridge.featureFlags?.serverMode]);
+
+  const isSingleDevice = useMemo(() => {
+    if (!devices) return false;
+    return countDeviceEndpoints(devices) === 1;
+  }, [devices]);
+
+  const handleEnableServerMode = async () => {
+    setEnabling(true);
+    try {
+      await updateBridge({
+        id: bridge.id,
+        name: bridge.name,
+        port: bridge.port,
+        filter: bridge.filter,
+        featureFlags: {
+          ...bridge.featureFlags,
+          serverMode: true,
+        },
+        icon: bridge.icon,
+        priority: bridge.priority,
+      });
+      notifications.show({
+        message:
+          "Server Mode enabled. The bridge will restart with your vacuum as a standalone device.",
+        severity: "success",
+      });
+    } catch (e) {
+      notifications.show({
+        message: `Failed to enable Server Mode: ${e instanceof Error ? e.message : String(e)}`,
+        severity: "error",
+      });
+    } finally {
+      setEnabling(false);
+    }
+  };
+
+  if (!shouldShow) return null;
+
+  return (
+    <Alert
+      severity="warning"
+      icon={<RocketLaunchIcon />}
+      action={
+        isSingleDevice ? (
+          <Button
+            color="warning"
+            size="small"
+            variant="outlined"
+            onClick={handleEnableServerMode}
+            disabled={enabling}
+            startIcon={enabling ? <CircularProgress size={16} /> : undefined}
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            {enabling ? "Enabling..." : "Enable Server Mode"}
+          </Button>
+        ) : undefined
+      }
+    >
+      <AlertTitle>Server Mode Recommended for Robot Vacuums</AlertTitle>
+      <Typography variant="body2">
+        This bridge contains a robot vacuum in <strong>bridged mode</strong>.
+        Apple Home and Alexa will show the bridge as an additional device,
+        resulting in duplicate entries. Enable <strong>Server Mode</strong> to
+        expose the vacuum as a standalone Matter device for full Siri/Alexa
+        voice command support and no duplicates.
+      </Typography>
+      {!isSingleDevice && (
+        <Typography variant="body2" sx={{ mt: 1 }}>
+          <strong>Note:</strong> Server Mode requires the vacuum to be the only
+          device on this bridge. Please remove other entities from this bridge
+          first, then enable Server Mode in the bridge settings.
+        </Typography>
+      )}
+    </Alert>
   );
 };

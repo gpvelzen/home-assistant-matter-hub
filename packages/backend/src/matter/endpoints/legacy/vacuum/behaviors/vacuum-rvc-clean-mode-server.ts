@@ -8,7 +8,10 @@ import {
   RvcCleanModeServer,
   type RvcCleanModeServerInitialState,
 } from "../../../../behaviors/rvc-clean-mode-server.js";
-import { isDreameVacuum } from "../utils/parse-vacuum-rooms.js";
+import {
+  isDreameVacuum,
+  isEcovacsVacuum,
+} from "../utils/parse-vacuum-rooms.js";
 
 const logger = Logger.get("VacuumRvcCleanModeServer");
 
@@ -292,10 +295,12 @@ export function createVacuumRvcCleanModeServer(
 }
 
 /**
- * Check if vacuum supports cleaning modes (Dreame vacuums typically do)
+ * Check if vacuum supports cleaning modes.
+ * Dreame and Ecovacs vacuums typically support vacuum/mop/both modes
+ * via a separate select entity (e.g., select.vacuum_cleaning_mode).
  */
 export function supportsCleaningModes(
   attributes: VacuumDeviceAttributes,
 ): boolean {
-  return isDreameVacuum(attributes);
+  return isDreameVacuum(attributes) || isEcovacsVacuum(attributes);
 }

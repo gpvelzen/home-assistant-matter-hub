@@ -46,14 +46,59 @@ function roomsToAreas(rooms: VacuumRoom[]): ServiceArea.Area[] {
 }
 
 /**
- * Convert button entity IDs to VacuumRoom array.
- * Uses the entity ID as the room ID and extracts a friendly name from it.
- * Example: "button.roborock_clean_kitchen" -> { id: "button.roborock_clean_kitchen", name: "Kitchen" }
+ * Build a lookup map from segment number to room name using room_mapping.
+ * room_mapping format: [[segmentId, cloudRoomId, roomName], ...]
  */
-function buttonEntitiesToRooms(entityIds: string[]): VacuumRoom[] {
+function buildRoomNameLookup(
+  attributes?: VacuumDeviceAttributes,
+): Map<number, string> {
+  const lookup = new Map<number, string>();
+  const mapping = attributes?.room_mapping;
+  if (!Array.isArray(mapping)) return lookup;
+
+  for (const entry of mapping) {
+    if (
+      Array.isArray(entry) &&
+      entry.length >= 3 &&
+      (typeof entry[0] === "number" || typeof entry[0] === "string") &&
+      typeof entry[2] === "string"
+    ) {
+      const segId =
+        typeof entry[0] === "number"
+          ? entry[0]
+          : Number.parseInt(String(entry[0]), 10);
+      if (!Number.isNaN(segId)) {
+        lookup.set(segId, entry[2]);
+      }
+    }
+  }
+  return lookup;
+}
+
+/**
+ * Convert button entity IDs to VacuumRoom array.
+ * First tries to resolve names from room_mapping (Roborock segment -> name mapping),
+ * then falls back to parsing the entity ID.
+ * Example: "button.roborock_s6_6b8e_segment_18" + room_mapping -> { id: "...", name: "Badrum" }
+ */
+function buttonEntitiesToRooms(
+  entityIds: string[],
+  attributes?: VacuumDeviceAttributes,
+): VacuumRoom[] {
+  const nameLookup = buildRoomNameLookup(attributes);
+
   return entityIds.map((entityId) => {
-    // Extract name from entity ID: button.roborock_clean_kitchen -> Kitchen
-    // or button.cucina -> Cucina
+    // Try to extract segment number and look up in room_mapping
+    const segmentMatch = entityId.match(/segment[_-]?(\d+)$/);
+    if (segmentMatch && nameLookup.size > 0) {
+      const segId = Number.parseInt(segmentMatch[1], 10);
+      const name = nameLookup.get(segId);
+      if (name) {
+        return { id: entityId, name };
+      }
+    }
+
+    // Fallback: extract name from entity ID
     const parts = entityId.split(".");
     const lastPart = parts[parts.length - 1] || entityId;
     // Remove common prefixes like "roborock_clean_", "vacuum_", etc.
@@ -94,7 +139,7 @@ export function createVacuumServiceAreaServer(
 
   // Prefer button entities if provided (Roborock integration)
   if (roomEntities && roomEntities.length > 0) {
-    rooms = buttonEntitiesToRooms(roomEntities);
+    rooms = buttonEntitiesToRooms(roomEntities, attributes);
     logger.info(
       `Using ${rooms.length} button entities as rooms: ${rooms.map((r) => r.name).join(", ")}`,
     );

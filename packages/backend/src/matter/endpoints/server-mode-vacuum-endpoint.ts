@@ -40,6 +40,9 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
 
     // Auto-assign battery entity if not manually set
     let effectiveMapping = mapping;
+    logger.info(
+      `${entityId}: device_id=${entity.device_id}, autoBattery=${registry.isAutoBatteryMappingEnabled()}, manualBattery=${mapping?.batteryEntity ?? "none"}`,
+    );
     if (entity.device_id) {
       if (registry.isAutoBatteryMappingEnabled() && !mapping?.batteryEntity) {
         const batteryEntityId = registry.findBatteryEntityForDevice(
@@ -52,11 +55,15 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
             batteryEntity: batteryEntityId,
           };
           registry.markBatteryEntityUsed(batteryEntityId);
-          logger.debug(
-            `Auto-assigned battery ${batteryEntityId} to ${entityId}`,
+          logger.info(`${entityId}: Auto-assigned battery ${batteryEntityId}`);
+        } else {
+          logger.warn(
+            `${entityId}: No battery entity found for device ${entity.device_id}`,
           );
         }
       }
+    } else {
+      logger.warn(`${entityId}: No device_id — cannot auto-assign battery`);
     }
 
     const payload = {
@@ -102,7 +109,16 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
 
   async updateStates(states: HomeAssistantStates): Promise<void> {
     const state = states[this.entityId] ?? {};
-    if (JSON.stringify(state) === JSON.stringify(this.lastState ?? {})) {
+    // Compare only meaningful fields — ignore volatile HA metadata
+    // (last_changed, last_updated, context) that changes on every event
+    // even when the actual device state/attributes are identical.
+    // Skipping these prevents unnecessary Matter subscription reports
+    // and reduces MRP traffic that can cause session loss.
+    if (
+      state.state === this.lastState?.state &&
+      JSON.stringify(state.attributes) ===
+        JSON.stringify(this.lastState?.attributes)
+    ) {
       return;
     }
 

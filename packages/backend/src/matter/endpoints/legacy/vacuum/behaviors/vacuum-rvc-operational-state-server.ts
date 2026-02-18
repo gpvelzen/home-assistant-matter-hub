@@ -33,7 +33,7 @@ export const VacuumRvcOperationalStateServer = RvcOperationalStateServer({
       operationalState = RvcOperationalState.OperationalState.Running;
     } else if (state === VacuumState.paused || state === VacuumState.idle) {
       operationalState = RvcOperationalState.OperationalState.Paused;
-    } else if (state === "unavailable") {
+    } else if (state === VacuumState.error || state === "unavailable") {
       operationalState = RvcOperationalState.OperationalState.Error;
     } else {
       // Unknown state - log it and treat as Running if it contains "clean"

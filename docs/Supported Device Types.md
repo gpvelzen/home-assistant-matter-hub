@@ -384,6 +384,7 @@ Mapped to **RoboticVacuumCleaner**.
 - Return to dock
 - Operating mode (Idle, Cleaning)
 - Room selection (if supported by vacuum)
+- Cleaning mode selection (Sweeping, Mopping, Sweeping and mopping, Mopping after sweeping)
 - Battery level (if available)
 
 **Entity Mapping Options:**
@@ -391,7 +392,7 @@ Mapped to **RoboticVacuumCleaner**.
 |--------|-------------|
 | `roomEntities` | Array of button entity IDs for room selection (Roborock) |
 | `batteryEntity` | External battery sensor entity (Roomba, Deebot) |
-| `cleaningModeEntity` | Select entity for cleaning mode (Dreame) |
+| `cleaningModeEntity` | Select entity for cleaning mode (Dreame, Ecovacs, etc.) |
 
 **Feature Flags (Bridge Settings):**
 | Flag | Description |

@@ -2,6 +2,12 @@ import express from "express";
 import type { BridgeService } from "../services/bridges/bridge-service.js";
 import type { HomeAssistantClient } from "../services/home-assistant/home-assistant-client.js";
 
+export interface SessionInfo {
+  id: number;
+  peerNodeId: string;
+  subscriptionCount: number;
+}
+
 export interface BridgeHealthInfo {
   id: string;
   name: string;
@@ -16,6 +22,13 @@ export interface BridgeHealthInfo {
     rootVendorId: number;
   }>;
   failedEntityCount: number;
+  connectivity: {
+    totalSessions: number;
+    totalSubscriptions: number;
+    orphanChecks: number;
+    hadActiveSession: boolean;
+    sessions: SessionInfo[];
+  };
 }
 
 export interface HealthStatus {
@@ -99,6 +112,7 @@ export function healthApi(
     const bridgeDetails: BridgeHealthInfo[] = bridges.map((b) => {
       const data = b.data;
       const fabrics = data.commissioning?.fabrics ?? [];
+      const sessionInfo = b.getSessionInfo();
       return {
         id: data.id,
         name: data.name,
@@ -113,6 +127,13 @@ export function healthApi(
           rootVendorId: f.rootVendorId,
         })),
         failedEntityCount: data.failedEntities?.length ?? 0,
+        connectivity: {
+          totalSessions: sessionInfo.totalSessions,
+          totalSubscriptions: sessionInfo.totalSubscriptions,
+          orphanChecks: sessionInfo.orphanChecks,
+          hadActiveSession: sessionInfo.hadActiveSession,
+          sessions: sessionInfo.sessions,
+        },
       };
     });
 

@@ -1,4 +1,6 @@
 import PreviewIcon from "@mui/icons-material/Preview";
+import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -8,13 +10,15 @@ import Collapse from "@mui/material/Collapse";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
+import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface FilterPreviewProps {
   filter: {
     include: Array<{ type: string; value: string }>;
     exclude: Array<{ type: string; value: string }>;
+    includeMode?: string;
   };
 }
 
@@ -28,21 +32,48 @@ interface PreviewResult {
   truncated: boolean;
 }
 
+const domainToMatterType: Record<string, string> = {
+  light: "Light",
+  switch: "On/Off Plug-in Unit",
+  lock: "Door Lock",
+  fan: "Fan",
+  binary_sensor: "Sensor",
+  sensor: "Sensor",
+  cover: "Window Covering",
+  climate: "Thermostat",
+  media_player: "Speaker / Video Player",
+  vacuum: "Robot Vacuum Cleaner",
+  humidifier: "Humidifier",
+  valve: "Water Valve",
+  alarm_control_panel: "On/Off Plug-in Unit",
+  event: "Generic Switch",
+  button: "Generic Switch",
+  input_button: "Generic Switch",
+  automation: "On/Off Switch",
+  script: "On/Off Switch",
+  scene: "On/Off Switch",
+  remote: "On/Off",
+  water_heater: "Water Heater",
+  input_boolean: "On/Off Plug-in Unit",
+};
+
+const tryParseJson = (text: string): unknown => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+};
+
 export function FilterPreview({ filter }: FilterPreviewProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filterJsonRef = useRef<string>("");
 
-  const tryParseJson = (text: string): unknown => {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return undefined;
-    }
-  };
-
-  const fetchPreview = async () => {
+  const fetchPreview = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -71,7 +102,33 @@ export function FilterPreview({ filter }: FilterPreviewProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  // Auto-refresh when filter changes (debounced 800ms)
+  useEffect(() => {
+    const hasFilters =
+      filter.include.length > 0 &&
+      filter.include.some((f) => f.type && f.value);
+
+    if (!hasFilters) {
+      setResult(null);
+      setExpanded(false);
+      return;
+    }
+
+    const newJson = JSON.stringify(filter);
+    if (newJson === filterJsonRef.current) return;
+    filterJsonRef.current = newJson;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchPreview();
+    }, 800);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [filter, fetchPreview]);
 
   const domainCounts = result
     ? result.entities.reduce(
@@ -82,6 +139,29 @@ export function FilterPreview({ filter }: FilterPreviewProps) {
         {} as Record<string, number>,
       )
     : {};
+
+  const warnings: string[] = [];
+  if (result) {
+    const hasVacuum = result.entities.some((e) => e.domain === "vacuum");
+    if (hasVacuum) {
+      warnings.push(
+        "This filter includes a vacuum. Consider using Server Mode (single device per bridge) for Apple Home/Alexa compatibility.",
+      );
+    }
+    if (result.total > 50) {
+      warnings.push(
+        `${result.total} entities is a large number. Consider splitting across multiple bridges for better stability.`,
+      );
+    }
+    const unsupportedDomains = Object.keys(domainCounts).filter(
+      (d) => !domainToMatterType[d],
+    );
+    if (unsupportedDomains.length > 0) {
+      warnings.push(
+        `Unsupported domains will be skipped: ${unsupportedDomains.join(", ")}`,
+      );
+    }
+  }
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -118,15 +198,38 @@ export function FilterPreview({ filter }: FilterPreviewProps) {
               )}
             </Box>
 
+            {warnings.length > 0 && (
+              <Stack spacing={0.5} sx={{ mb: 1.5 }}>
+                {warnings.map((warning) => (
+                  <Alert
+                    key={warning}
+                    severity="warning"
+                    variant="outlined"
+                    icon={
+                      warning.includes("vacuum") ? (
+                        <RocketLaunchIcon fontSize="small" />
+                      ) : (
+                        <WarningAmberIcon fontSize="small" />
+                      )
+                    }
+                    sx={{ py: 0 }}
+                  >
+                    <Typography variant="caption">{warning}</Typography>
+                  </Alert>
+                ))}
+              </Stack>
+            )}
+
             <Box display="flex" gap={0.5} flexWrap="wrap" mb={2}>
               {Object.entries(domainCounts)
                 .sort((a, b) => b[1] - a[1])
                 .map(([domain, count]) => (
                   <Chip
                     key={domain}
-                    label={`${domain}: ${count}`}
+                    label={`${domain}: ${count}${domainToMatterType[domain] ? ` → ${domainToMatterType[domain]}` : ""}`}
                     size="small"
                     variant="outlined"
+                    color={domainToMatterType[domain] ? "default" : "warning"}
                   />
                 ))}
             </Box>
@@ -146,11 +249,12 @@ export function FilterPreview({ filter }: FilterPreviewProps) {
                 <ListItem key={entity.entity_id} divider>
                   <ListItemText
                     primary={entity.friendly_name || entity.entity_id}
-                    secondary={
-                      entity.friendly_name ? entity.entity_id : undefined
-                    }
+                    secondary={`${entity.entity_id}${domainToMatterType[entity.domain] ? ` → ${domainToMatterType[entity.domain]}` : ""}`}
                     primaryTypographyProps={{ variant: "body2" }}
-                    secondaryTypographyProps={{ variant: "caption" }}
+                    secondaryTypographyProps={{
+                      variant: "caption",
+                      fontFamily: "monospace",
+                    }}
                   />
                 </ListItem>
               ))}

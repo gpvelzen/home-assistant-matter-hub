@@ -110,6 +110,41 @@ export class BridgeService extends Service {
     }
   }
 
+  async stopAll() {
+    for (const bridge of this.bridges) {
+      try {
+        await bridge.stop();
+        this.onBridgeChanged?.(bridge.id);
+      } catch (e) {
+        console.error(`Failed to stop bridge ${bridge.id}:`, e);
+      }
+    }
+  }
+
+  async restartAll() {
+    for (const bridge of this.bridges) {
+      try {
+        await bridge.stop();
+      } catch (e) {
+        console.error(`Failed to stop bridge ${bridge.id} during restart:`, e);
+      }
+    }
+    // Sort by priority for startup
+    const sortedBridges = [...this.bridges].sort((a, b) => {
+      const priorityA = a.data.priority ?? 100;
+      const priorityB = b.data.priority ?? 100;
+      return priorityA - priorityB;
+    });
+    for (const bridge of sortedBridges) {
+      try {
+        await bridge.start();
+        this.onBridgeChanged?.(bridge.id);
+      } catch (e) {
+        console.error(`Failed to start bridge ${bridge.id} during restart:`, e);
+      }
+    }
+  }
+
   async refreshAll() {
     for (const bridge of this.bridges) {
       try {

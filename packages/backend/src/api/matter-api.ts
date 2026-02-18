@@ -170,6 +170,72 @@ export function matterApi(
     }
   });
 
+  router.post("/bridges/actions/start-all", async (_, res) => {
+    try {
+      await bridgeService.startAll();
+      res
+        .status(200)
+        .json({ success: true, count: bridgeService.bridges.length });
+    } catch (e) {
+      res
+        .status(500)
+        .json({ error: e instanceof Error ? e.message : "Unknown error" });
+    }
+  });
+
+  router.post("/bridges/actions/stop-all", async (_, res) => {
+    try {
+      await bridgeService.stopAll();
+      res
+        .status(200)
+        .json({ success: true, count: bridgeService.bridges.length });
+    } catch (e) {
+      res
+        .status(500)
+        .json({ error: e instanceof Error ? e.message : "Unknown error" });
+    }
+  });
+
+  router.post("/bridges/actions/restart-all", async (_, res) => {
+    try {
+      await bridgeService.restartAll();
+      res
+        .status(200)
+        .json({ success: true, count: bridgeService.bridges.length });
+    } catch (e) {
+      res
+        .status(500)
+        .json({ error: e instanceof Error ? e.message : "Unknown error" });
+    }
+  });
+
+  router.post("/bridges/:bridgeId/clone", async (req, res) => {
+    const bridgeId = req.params.bridgeId;
+    const source = bridgeService.get(bridgeId);
+    if (!source) {
+      res.status(404).send("Not Found");
+      return;
+    }
+    const data = source.data;
+    const newPort = bridgeService.getNextAvailablePort();
+    try {
+      const clone = await bridgeService.create({
+        name: `${data.name} (Copy)`,
+        port: newPort,
+        filter: data.filter,
+        featureFlags: data.featureFlags,
+        countryCode: data.countryCode,
+        icon: data.icon,
+        priority: data.priority,
+      });
+      res.status(200).json(clone.data);
+    } catch (e) {
+      res
+        .status(500)
+        .json({ error: e instanceof Error ? e.message : "Unknown error" });
+    }
+  });
+
   router.get("/next-port", (_, res) => {
     const port = bridgeService.getNextAvailablePort();
     res.status(200).json({ port });

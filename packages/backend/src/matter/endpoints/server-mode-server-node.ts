@@ -42,6 +42,9 @@ export class ServerModeServerNode extends ServerNode {
         softwareVersion: bridgeData.basicInformation.softwareVersion,
         ...(bridgeData.countryCode ? { location: bridgeData.countryCode } : {}),
       },
+      subscriptions: {
+        persistenceEnabled: false,
+      },
     });
   }
 

@@ -2,6 +2,7 @@ import type { SensorDeviceAttributes } from "@home-assistant-matter-hub/common";
 import { TemperatureSensorDevice } from "@matter/main/devices";
 import { EntityStateProvider } from "../../../../../services/bridges/entity-state-provider.js";
 import { HomeAssistantConfig } from "../../../../../services/home-assistant/home-assistant-config.js";
+import { convertPressureToHpa } from "../../../../../utils/converters/pressure.js";
 import { Temperature } from "../../../../../utils/converters/temperature.js";
 import { BasicInformationServer } from "../../../../behaviors/basic-information-server.js";
 import { HomeAssistantEntityBehavior } from "../../../../behaviors/home-assistant-entity-behavior.js";
@@ -40,9 +41,16 @@ const pressureConfig: PressureMeasurementConfig = {
 
     if (pressureEntity) {
       const stateProvider = agent.env.get(EntityStateProvider);
-      const pressure = stateProvider.getNumericState(pressureEntity);
-      if (pressure != null) {
-        return pressure;
+      const state = stateProvider.getState(pressureEntity);
+      if (state) {
+        const pressure =
+          state.state == null || Number.isNaN(+state.state)
+            ? null
+            : +state.state;
+        if (pressure != null) {
+          const attributes = state.attributes as SensorDeviceAttributes;
+          return convertPressureToHpa(pressure, attributes.unit_of_measurement);
+        }
       }
     }
     return undefined;

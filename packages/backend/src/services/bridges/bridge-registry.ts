@@ -6,6 +6,7 @@ import type {
   SensorDeviceAttributes,
 } from "@home-assistant-matter-hub/common";
 import { SensorDeviceClass } from "@home-assistant-matter-hub/common";
+import { Logger } from "@matter/general";
 import { keys, pickBy, values } from "lodash-es";
 import type {
   HomeAssistantDevices,
@@ -60,19 +61,39 @@ export class BridgeRegistry {
     // Search the FULL HA registry, not the filtered bridge entities.
     // The battery sensor might not match the bridge filter (e.g., vacuum
     // server bridges only include vacuum.* entities, not sensor.*).
+    const log = Logger.get("BridgeRegistry");
     const entities = values(this.registry.entities);
-    for (const entity of entities) {
-      if (entity.device_id !== deviceId) continue;
+    const sameDevice = entities.filter((e) => e.device_id === deviceId);
+    log.debug(
+      `findBatteryEntityForDevice: deviceId=${deviceId}, ` +
+        `totalEntities=${entities.length}, sameDevice=${sameDevice.length}, ` +
+        `sameDeviceIds=[${sameDevice.map((e) => e.entity_id).join(", ")}]`,
+    );
+    for (const entity of sameDevice) {
       if (!entity.entity_id.startsWith("sensor.")) continue;
 
       const state = this.registry.states[entity.entity_id];
-      if (!state) continue;
+      if (!state) {
+        log.debug(
+          `findBatteryEntityForDevice: ${entity.entity_id} has no state`,
+        );
+        continue;
+      }
 
       const attrs = state.attributes as SensorDeviceAttributes;
+      log.debug(
+        `findBatteryEntityForDevice: ${entity.entity_id} device_class=${attrs.device_class}`,
+      );
       if (attrs.device_class === SensorDeviceClass.battery) {
+        log.info(
+          `findBatteryEntityForDevice: Found battery ${entity.entity_id} for device ${deviceId}`,
+        );
         return entity.entity_id;
       }
     }
+    log.warn(
+      `findBatteryEntityForDevice: No battery sensor found for device ${deviceId}`,
+    );
     return undefined;
   }
 
