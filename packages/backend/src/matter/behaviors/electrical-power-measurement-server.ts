@@ -57,11 +57,11 @@ export const HaElectricalPowerMeasurementServer =
       {
         measurementType: ElectricalPowerMeasurement.MeasurementType.ActivePower,
         measured: true,
-        minMeasuredValue: 0,
+        minMeasuredValue: 1, // Cannot be 0 (reserved as "null" in Matter spec)
         maxMeasuredValue: 100_000_000, // 100kW in mW
         accuracyRanges: [
           {
-            rangeMin: 0,
+            rangeMin: 1,
             rangeMax: 100_000_000,
             fixedMax: 1000, // 1W accuracy
           },
