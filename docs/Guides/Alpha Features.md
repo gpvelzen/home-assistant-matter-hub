@@ -3,7 +3,7 @@
 This guide covers features available in the Alpha version of Home-Assistant-Matter-Hub.
 
 > [!NOTE]
-> **Alpha and Stable are currently in sync (v2.0.20).** All previously alpha-only features have been promoted to the stable release. New experimental features will appear here before being promoted.
+> **Alpha is ahead of Stable (v2.1.0-alpha.266 vs v2.0.21).** Alpha contains new features being tested before promotion to stable. See "Current Alpha Features" section below for what's new in alpha.
 
 > [!WARNING]
 > Alpha versions are for testing only and may contain bugs. Use at your own risk!
