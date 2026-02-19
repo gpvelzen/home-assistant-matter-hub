@@ -318,7 +318,7 @@ export function HealthDashboard() {
         </Box>
       </Box>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={2} alignItems="stretch">
         {[...health.bridgeDetails]
           .sort((a, b) => {
             let cmp = 0;
@@ -330,10 +330,20 @@ export function HealthDashboard() {
             return sortDirection === "asc" ? cmp : -cmp;
           })
           .map((bridge) => (
-            <Grid size={{ xs: 12, md: 6 }} key={bridge.id}>
+            <Grid
+              size={{ xs: 12, sm: 6, md: 6, lg: 4, xl: 3 }}
+              key={bridge.id}
+              sx={{ display: "flex" }}
+            >
               <Card
                 variant="outlined"
                 sx={{
+                  width: "100%",
+                  height: "100%",
+                  minWidth: 280,
+                  maxWidth: 480,
+                  display: "flex",
+                  flexDirection: "column",
                   borderColor:
                     bridge.status === "running"
                       ? "success.main"
@@ -342,19 +352,43 @@ export function HealthDashboard() {
                         : "warning.main",
                 }}
               >
-                <CardContent>
+                <CardContent
+                  sx={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    p: 2,
+                    "&:last-child": { pb: 2 },
+                  }}
+                >
                   <Box
                     display="flex"
                     justifyContent="space-between"
-                    alignItems="center"
+                    alignItems="flex-start"
+                    flexShrink={0}
                   >
-                    <Box display="flex" alignItems="center" gap={1}>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={1}
+                      minWidth={0}
+                    >
                       <DevicesIcon />
-                      <Typography variant="subtitle1" fontWeight="bold">
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight="bold"
+                        noWrap
+                        sx={{ maxWidth: 140 }}
+                      >
                         {bridge.name}
                       </Typography>
                     </Box>
-                    <Box display="flex" alignItems="center" gap={1}>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={0.5}
+                      flexShrink={0}
+                    >
                       <Chip
                         label={bridge.status.toUpperCase()}
                         color={
@@ -380,37 +414,61 @@ export function HealthDashboard() {
                   </Box>
 
                   {bridge.statusReason && (
-                    <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                    <Typography
+                      variant="body2"
+                      color="error"
+                      sx={{ mt: 1, flexShrink: 0 }}
+                    >
                       {bridge.statusReason}
                     </Typography>
                   )}
 
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Port: {bridge.port} | Devices: {bridge.deviceCount} |
-                      Fabrics: {bridge.fabricCount}
+                  <Box sx={{ mt: "auto", pt: 1, flexShrink: 0 }}>
+                    <Box
+                      display="flex"
+                      flexWrap="wrap"
+                      gap={0.5}
+                      alignItems="center"
+                    >
+                      <Chip
+                        label={`Port ${bridge.port}`}
+                        size="small"
+                        variant="outlined"
+                        color="default"
+                      />
+                      <Chip
+                        label={`${bridge.deviceCount} Devices`}
+                        size="small"
+                        variant="outlined"
+                        color="default"
+                      />
+                      <Chip
+                        label={`${bridge.fabricCount} Fabrics`}
+                        size="small"
+                        variant="outlined"
+                        color="default"
+                      />
                       {bridge.failedEntityCount > 0 && (
                         <Chip
                           label={`${bridge.failedEntityCount} failed`}
                           color="error"
                           size="small"
-                          sx={{ ml: 1 }}
                         />
                       )}
-                    </Typography>
+                    </Box>
                   </Box>
 
                   {bridge.connectivity && bridge.status === "running" && (
-                    <Box sx={{ mt: 1 }}>
+                    <Box sx={{ mt: 1, flexShrink: 0 }}>
                       <Typography variant="caption" color="text.secondary">
-                        Sessions: {bridge.connectivity.totalSessions} |
-                        Subscriptions: {bridge.connectivity.totalSubscriptions}
+                        Sessions: {bridge.connectivity.totalSessions} | Subs:{" "}
+                        {bridge.connectivity.totalSubscriptions}
                       </Typography>
                     </Box>
                   )}
 
                   {bridge.fabrics.length > 0 && (
-                    <Box sx={{ mt: 1 }}>
+                    <Box sx={{ mt: 1, flexShrink: 0 }}>
                       <Typography variant="caption" color="text.secondary">
                         Connected to:
                       </Typography>
