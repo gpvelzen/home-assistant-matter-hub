@@ -24,6 +24,7 @@ import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useCallback, useEffect, useState } from "react";
+import { EntityAutocomplete } from "./EntityAutocomplete.tsx";
 
 interface RelatedButton {
   entity_id: string;
@@ -193,15 +194,12 @@ export function EntityMappingDialog({
       </DialogTitle>
       <DialogContent>
         {isNewMapping && (
-          <TextField
-            fullWidth
-            margin="normal"
+          <EntityAutocomplete
+            value={editEntityId}
+            onChange={setEditEntityId}
             label="Entity ID"
             placeholder="light.living_room"
-            value={editEntityId}
-            onChange={(e) => setEditEntityId(e.target.value)}
-            helperText="Enter the Home Assistant entity ID (e.g., light.living_room)"
-            required
+            helperText="Search or enter the Home Assistant entity ID (e.g., light.living_room)"
           />
         )}
         <FormControl fullWidth margin="normal">
@@ -251,26 +249,24 @@ export function EntityMappingDialog({
         />
 
         {showFilterLifeField && (
-          <TextField
-            fullWidth
-            margin="normal"
+          <EntityAutocomplete
+            value={filterLifeEntity}
+            onChange={setFilterLifeEntity}
             label="Filter Life Sensor (optional)"
             placeholder="sensor.air_purifier_filter_life"
-            value={filterLifeEntity}
-            onChange={(e) => setFilterLifeEntity(e.target.value)}
             helperText="Sensor entity that provides filter life percentage (0-100%) for HEPA filter monitoring"
+            domain="sensor"
           />
         )}
 
         {showCleaningModeField && (
-          <TextField
-            fullWidth
-            margin="normal"
+          <EntityAutocomplete
+            value={cleaningModeEntity}
+            onChange={setCleaningModeEntity}
             label="Cleaning Mode Entity (optional)"
             placeholder="select.vacuum_cleaning_mode"
-            value={cleaningModeEntity}
-            onChange={(e) => setCleaningModeEntity(e.target.value)}
             helperText="Select entity that controls the vacuum cleaning mode (e.g., select.r2_d2_cleaning_mode for Dreame vacuums)"
+            domain="select"
           />
         )}
 
@@ -348,55 +344,50 @@ export function EntityMappingDialog({
 
         {showHumidityBatteryFields && (
           <>
-            <TextField
-              fullWidth
-              margin="normal"
+            <EntityAutocomplete
+              value={humidityEntity}
+              onChange={setHumidityEntity}
               label="Humidity Sensor (optional)"
               placeholder="sensor.h_t_bad_humidity"
-              value={humidityEntity}
-              onChange={(e) => setHumidityEntity(e.target.value)}
               helperText="Combine with a humidity sensor to create a single Temperature+Humidity device"
+              domain="sensor"
             />
-            <TextField
-              fullWidth
-              margin="normal"
+            <EntityAutocomplete
+              value={pressureEntity}
+              onChange={setPressureEntity}
               label="Pressure Sensor (optional)"
               placeholder="sensor.h_t_bad_pressure"
-              value={pressureEntity}
-              onChange={(e) => setPressureEntity(e.target.value)}
               helperText="Combine with a pressure sensor to create a single Temperature+Pressure device"
+              domain="sensor"
             />
-            <TextField
-              fullWidth
-              margin="normal"
+            <EntityAutocomplete
+              value={batteryEntity}
+              onChange={setBatteryEntity}
               label="Battery Sensor (optional)"
               placeholder="sensor.h_t_bad_battery"
-              value={batteryEntity}
-              onChange={(e) => setBatteryEntity(e.target.value)}
               helperText="Include battery level from a separate sensor entity"
+              domain="sensor"
             />
           </>
         )}
 
         {showEnergyFields && (
           <>
-            <TextField
-              fullWidth
-              margin="normal"
+            <EntityAutocomplete
+              value={powerEntity}
+              onChange={setPowerEntity}
               label="Power Sensor (optional)"
               placeholder="sensor.smart_plug_power"
-              value={powerEntity}
-              onChange={(e) => setPowerEntity(e.target.value)}
               helperText="Sensor with device_class: power (W) — adds real-time power measurement to this device"
+              domain="sensor"
             />
-            <TextField
-              fullWidth
-              margin="normal"
+            <EntityAutocomplete
+              value={energyEntity}
+              onChange={setEnergyEntity}
               label="Energy Sensor (optional)"
               placeholder="sensor.smart_plug_energy"
-              value={energyEntity}
-              onChange={(e) => setEnergyEntity(e.target.value)}
               helperText="Sensor with device_class: energy (kWh) — adds cumulative energy measurement to this device"
+              domain="sensor"
             />
           </>
         )}
