@@ -32,6 +32,7 @@ export type MatterDeviceType =
   | "thermostat"
   | "tvoc_sensor"
   | "water_heater"
+  | "water_freeze_detector"
   | "water_leak_detector"
   | "water_valve"
   | "window_covering";
@@ -154,6 +155,7 @@ export const matterDeviceTypeLabels: Record<MatterDeviceType, string> = {
   thermostat: "Thermostat",
   tvoc_sensor: "TVOC / VOC Index Sensor",
   water_heater: "Water Heater",
+  water_freeze_detector: "Water Freeze Detector",
   water_leak_detector: "Water Leak Detector",
   water_valve: "Water Valve",
   window_covering: "Window Covering",
@@ -163,7 +165,13 @@ export const domainToDefaultMatterTypes: Partial<
   Record<HomeAssistantDomain, MatterDeviceType[]>
 > = {
   automation: ["on_off_switch"],
-  binary_sensor: ["contact_sensor", "occupancy_sensor"],
+  binary_sensor: [
+    "contact_sensor",
+    "occupancy_sensor",
+    "smoke_co_alarm",
+    "water_freeze_detector",
+    "water_leak_detector",
+  ],
   button: ["generic_switch"],
   climate: ["thermostat"],
   cover: ["window_covering"],

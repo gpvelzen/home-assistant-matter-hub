@@ -11,6 +11,9 @@ import { AirPurifierEndpoint } from "./air-purifier/index.js";
 import { AlarmControlPanelDevice } from "./alarm-control-panel/index.js";
 import { AutomationDevice } from "./automation/index.js";
 import { BinarySensorDevice } from "./binary-sensor/index.js";
+import { SmokeAlarmType } from "./binary-sensor/smoke-co-alarm.js";
+import { WaterFreezeDetectorType } from "./binary-sensor/water-freeze-detector.js";
+import { WaterLeakDetectorType } from "./binary-sensor/water-leak-detector.js";
 import { ButtonDevice } from "./button/index.js";
 import { ClimateDevice } from "./climate/index.js";
 import { CoverDevice } from "./cover/index.js";
@@ -219,4 +222,16 @@ const matterDeviceTypeFactories: Partial<
   pump: PumpEndpoint,
   water_heater: WaterHeaterDevice,
   generic_switch: EventDevice,
+  smoke_co_alarm: (ha) =>
+    SmokeAlarmType.set({
+      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
+    }),
+  water_freeze_detector: (ha) =>
+    WaterFreezeDetectorType.set({
+      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
+    }),
+  water_leak_detector: (ha) =>
+    WaterLeakDetectorType.set({
+      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
+    }),
 };
