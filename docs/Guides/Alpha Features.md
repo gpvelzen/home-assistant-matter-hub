@@ -360,9 +360,62 @@ Real-time diagnostic event streaming integrated into the Health Dashboard. Emits
 { "type": "unsubscribe_diagnostics" }
 ```
 
----
+#### Live Diagnostics Dashboard Improvements
 
-## Reference: Feature Documentation
+**Bridge Cards (v2.1.0-alpha.10+):**
+- **Uniformly sized cards** — All bridge cards have consistent `minWidth: 280px`, `maxWidth: 480px`
+- **Self-adjusting layout** — Cards grow/shrink together with flexbox layout
+- **Alphabetical sorting** — Bridges sorted A-Z by name by default
+- **Chip-based info display** — Port, device count, fabric count shown as separate chips instead of text line
+- **Responsive grid** — Cards adapt: 1 (mobile) → 2 (tablet) → 2 (desktop) → 3 (lg) → 4 (xl) per row
+
+### Thermostat Auto-Resume Fix
+
+**Issue:** When a thermostat was off and you asked a voice assistant to "set temperature to 20°C", it only worked if the new temperature was different from the current setpoint. If already at 20°C, nothing happened.
+
+**Fix:** The thermostat now intercepts **all** setpoint writes via overridden class setters, not just value changes. When a write occurs while `systemMode` is `Off`, the device automatically resumes to Heat/Cool mode.
+
+**Works with:** Google Home, Alexa, Apple Home
+
+**Technical details:**
+- Overrides `occupiedHeatingSetpoint` and `occupiedCoolingSetpoint` setters in `ThermostatServerBase`
+- Tracks last setpoint values to distinguish initialization from user writes
+- Only auto-resumes for single-temp mode (not range/auto mode)
+- Uses `setSystemMode` config action to turn on the device
+
+### Vacuum "Docked" State Fix
+
+**Issue:** Vacuums showed "Paused" instead of "Docked" when idle and charging in their dock.
+
+**Fix:** Corrected the operational state mapping logic in `VacuumRvcOperationalStateServer`. Now properly detects charging state for vacuums that report `idle` while docked and charging (Ecovacs, some Roborock models).
+
+**Detection logic:**
+- If HA state is `docked` → shows `Docked`
+- If HA state is `idle` + charging detected → shows `Docked`  
+- If HA state is `idle` + not charging → shows `Paused`
+
+**Controller behavior:**
+- Apple Home: Shows correct "Charging" or "Docked" status
+- Google Home: Status displayed correctly
+- Alexa: Status displayed correctly
+
+### Memory Leak & Stability Fixes
+
+**Issue:** Long-running bridges could experience Out-Of-Memory (OOM) errors due to improper endpoint disposal.
+
+**Fix:** Fixed endpoint cleanup in disposal methods:
+- `BridgeEndpointManager.dispose()` now properly deletes all child endpoints
+- `ServerModeEndpointManager.dispose()` now properly deletes the device endpoint
+- Prevents accumulation of orphaned Matter.js objects in memory
+
+### Battery Sensor Log Spam Fix
+
+**Issue:** Logs were flooded with "No battery entity found" messages for devices without battery sensors.
+
+**Fix:** 
+- Added caching to `findBatteryEntityForDevice()` to avoid repeated searches
+- Reduced log level from `warn` to `debug` for missing battery sensors
+- Cache cleared on registry refresh to prevent stale data
 
 The following sections document features that are now in stable but provide detailed usage instructions.
 

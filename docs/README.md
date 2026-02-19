@@ -84,6 +84,14 @@ Home, ...) are not placed in the same network segment. Please make sure to revie
 | **🔧 DoorLock Fix** | Corrected `supportedOperatingModes` inverted bitmap semantics per Matter spec |
 | **⚡ Energy Event** | `ElectricalEnergyMeasurement` now emits `cumulativeEnergyMeasured` event per matter.js reference |
 | **🤖 Automation Fix** | `turnOff` now sends `automation.turn_off` (disable) instead of no-op |
+| **🏠 Dashboard** | New landing page with bridge overview, quick navigation, and Bridge Wizard access |
+| **🔍 Entity Autocomplete** | Search-as-you-type entity suggestions in Entity Mapping dialogs |
+| **⏱️ Light Transitions** | Matter transition times forwarded to HA `light.turn_on` service |
+| **🌡️ Thermostat Auto-Resume** | Auto-resume works even when setting same temperature while off (#176) |
+| **🤖 Vacuum Docked State** | Vacuums correctly show "Docked" instead of "Paused" when charging (#165) |
+| **📱 Dashboard UI** | Responsive cards, sorted bridges, icon legend, mobile-optimized |
+| **💾 Memory Fixes** | Endpoint disposal fixes to prevent OOM issues |
+| **🔋 Reduced Logging** | Battery sensor mapping no longer spams logs |
 
 </details>
 

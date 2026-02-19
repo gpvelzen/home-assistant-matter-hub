@@ -123,6 +123,11 @@ of port forwarding etc.
 | **🔄 Force Sync Composed Fix** | `autoForceSync` now correctly traverses sub-endpoints of composed devices (e.g., Temperature/Humidity/Pressure sensors created by `autoComposedDevices`) |
 | **🧊 Water Freeze Detector** | `binary_sensor` with device class `cold` now maps to Matter WaterFreezeDetector (0x0041) instead of ContactSensor |
 | **🔧 Device Type Overrides** | SmokeCO Alarm, Water Leak Detector, and Water Freeze Detector can now be selected as manual device type overrides via Entity Mapping |
+| **🌡️ Thermostat Auto-Resume** | Fixed auto-resume when setting the same temperature while device is off - "OK Google, set to 20°C" now works even if already at 20°C (#176) |
+| **🤖 Vacuum State Fix** | Vacuums now correctly show "Docked" instead of "Paused" when idle and charging (#165) |
+| **🗺️ Live Diagnostics Improvements** | Bridge cards are now uniformly sized, self-adjusting, and sorted A-Z. Info shown as chips for better scaling |
+| **💾 Memory Leak Fix** | Fixed endpoint disposal in BridgeEndpointManager and ServerModeEndpointManager to prevent OOM issues |
+| **🔋 Battery Log Spam Fix** | Reduced log noise from battery sensor auto-mapping |
 
 </details>
 
