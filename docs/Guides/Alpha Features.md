@@ -3,7 +3,7 @@
 This guide covers features available in the Alpha version of Home-Assistant-Matter-Hub.
 
 > [!NOTE]
-> **Alpha and Stable are currently in sync (v2.0.20).** All previously alpha-only features have been promoted to the stable release. New experimental features will appear here before being promoted.
+> **Alpha is ahead of Stable (v2.1.0-alpha.266 vs v2.0.21).** Alpha contains new features being tested before promotion to stable. See "Current Alpha Features" section below for what's new in alpha.
 
 > [!WARNING]
 > Alpha versions are for testing only and may contain bugs. Use at your own risk!
@@ -93,11 +93,329 @@ The following features have graduated from Alpha to Stable:
 
 ## Current Alpha Features
 
-Alpha and Stable are currently in sync (v2.0.20). New experimental features will be added here before being promoted to stable.
+### Dashboard Landing Page
 
----
+The application now opens with a dashboard overview instead of the bridges list. The dashboard provides a compact summary of your system at a glance:
 
-## Reference: Feature Documentation
+- **Stat Cards** — Bridge count (with status breakdown), total device count (with failed count), fabric connections, and Home Assistant connection status
+- **Version & Uptime** — Current HAMH version and system uptime
+- **Create Bridge Buttons** — Prominent buttons to launch the Bridge Wizard or create a bridge manually, directly from the dashboard
+- **Bridge Mini-Cards** — Each bridge shown with its name, device count, fabric count, and status chip. Click any bridge to navigate to its detail page.
+- **Quick Navigation** — Cards linking to all application pages: Bridges, All Devices, Network Map, Health Dashboard, Startup Order, Lock Credentials, and Filter Reference
+
+The dashboard fetches data from `/api/health/detailed` and refreshes every 15 seconds.
+
+### Bridge Wizard Feature Flags
+
+The Bridge Wizard now has a 5-step flow: **Template → Bridge Info → Entity Filter → Feature Flags → Review & Create**. The new Feature Flags step lets you enable common flags directly during bridge creation:
+
+- **Auto Compose Devices** (`autoComposedDevices`) — Combine related entities from the same HA device into single Matter endpoints
+- **Auto Force Sync** (`autoForceSync`) — Periodically push state to controllers (recommended for Google Home / Alexa)
+- **Invert Cover Direction** (`coverSwapOpenClose`) — Swap open/close direction for covers
+- **Include Hidden Entities** (`includeHiddenEntities`) — Also expose hidden HA entities
+
+When a template is selected, its flags are pre-filled but can be adjusted in this step. All other flags remain available in the full bridge editor after creation.
+
+### Entity Autocomplete
+
+All entity ID input fields in the Entity Mapping dialog now use an autocomplete component with search-as-you-type suggestions. This replaces the previous plain text fields where users had to type entity IDs from memory.
+
+**How it works:**
+- Start typing an entity ID or friendly name — matching entities from your Home Assistant registry are suggested
+- Results are fetched from `/api/home-assistant/entities` with optional domain filtering
+- Each suggestion shows the entity ID and its friendly name
+- You can still type a custom entity ID manually if needed (freeSolo mode)
+- Domain-specific fields (e.g., humidity, battery, power sensors) automatically filter suggestions to the `sensor` domain
+
+**Affected fields:** Entity ID, Humidity Sensor, Pressure Sensor, Battery Sensor, Filter Life Sensor, Cleaning Mode Entity, Power Sensor, Energy Sensor.
+
+### Light Transition Time
+
+Matter controllers can send transition times with light commands (brightness changes, color temperature changes, hue/saturation changes). These transition times are now forwarded to Home Assistant as the `transition` parameter in `light.turn_on` service calls.
+
+**Supported commands:**
+- `moveToLevel` / `moveToLevelWithOnOff` — brightness transitions
+- `moveToColorTemperature` — color temperature transitions
+- `moveToHueAndSaturation` — color transitions
+
+**Unit conversion:** Matter uses tenths of a second (e.g., `transitionTime: 10` = 1 second). Home Assistant uses seconds as a float. The conversion is `transition = transitionTime / 10`.
+
+**Backward compatible:** Transition times of 0 or null are not forwarded, preserving current behavior (instant changes). Only non-zero transition times are included in the HA service call.
+
+### Auto Composed Devices (Master Toggle)
+
+**Feature Flag:** `autoComposedDevices` (default: `false`)
+
+A master toggle that automatically combines related Home Assistant entities from the same physical device into Matter endpoints. When enabled, it activates all auto-mapping sub-features at once: battery, humidity, pressure, power, and energy mapping.
+
+For **temperature sensors** with auto-mapped humidity/pressure/battery, this flag creates **real Matter Composed Devices** — a `BridgedNodeEndpoint` parent with separate sub-endpoints for each sensor type. Each sub-endpoint uses its correct Matter device type, which is required for Apple Home, Google Home, and Amazon Alexa to properly recognize and display humidity and pressure readings.
+
+For **switches/lights** with auto-mapped power/energy, the clusters are added directly to the switch endpoint (flat mapping), since `ElectricalPowerMeasurement` and `ElectricalEnergyMeasurement` are valid optional clusters on those device types.
+
+#### How It Works
+
+The feature operates in two phases during bridge initialization:
+
+**Phase 1 — Entity Discovery** (`BridgeRegistry.preCalculateAutoAssignments`)
+
+Before any Matter endpoints are created, the bridge registry scans the **full Home Assistant entity and device registry** (not just filtered bridge entities) to find related sensor entities that belong to the same HA device (`device_id`). It searches for:
+
+| Sensor Type | HA Domain | device_class | Target Entity Domains |
+|---|---|---|---|
+| Battery | `sensor.*` | `battery` | All domains |
+| Humidity | `sensor.*` | `humidity` | `sensor.temperature` |
+| Pressure | `sensor.*` | `atmospheric_pressure` | `sensor.temperature` |
+| Power | `sensor.*` | `power` | `switch`, `light` |
+| Energy | `sensor.*` | `energy` | `switch`, `light` |
+
+**Phase 2 — Endpoint Construction** (`LegacyEndpoint.create`)
+
+When each Matter endpoint is created, the auto-mapping logic runs in a strict order:
+
+1. **Skip check** — If this entity was already consumed as a sub-entity (e.g., a humidity sensor already merged into a temperature endpoint), it is skipped entirely. No duplicate Matter endpoint is created.
+
+2. **Auto-assign in order** (only if `device_id` is present and no manual mapping exists):
+   - **Humidity → Temperature sensor**
+   - **Pressure → Temperature sensor**
+   - **Battery → Any entity** (done last so battery goes to the combined sensor, not separately)
+   - **Power → Switch/Light**
+   - **Energy → Switch/Light**
+
+3. **Composed device check** — If `autoComposedDevices` is enabled and this is a temperature sensor with auto-mapped humidity or pressure, a `ComposedSensorEndpoint` is created instead of a flat endpoint. This produces a `BridgedNodeEndpoint` parent with separate sub-endpoints:
+
+   ```
+   BridgedNodeEndpoint (parent)
+   ├── BridgedDeviceBasicInformation + PowerSource (battery)
+   ├── TemperatureSensorDevice (0x0302) sub-endpoint
+   ├── HumiditySensorDevice (0x0307) sub-endpoint
+   └── PressureSensorDevice (0x0305) sub-endpoint
+   ```
+
+   Each sub-endpoint has its own `HomeAssistantEntityBehavior` and reads directly from its own HA entity state.
+
+4. **Flat endpoint fallback** — For switches/lights or if `autoComposedDevices` is not enabled, `createLegacyEndpointType()` adds the extra clusters directly to the primary endpoint type.
+
+#### Implementation Details
+
+**Flag Wiring** (`BridgeRegistry`)
+
+Each sub-feature check (`isAutoBatteryMappingEnabled()`, `isAutoHumidityMappingEnabled()`, `isAutoPressureMappingEnabled()`) was extended to also check the master flag:
+
+```typescript
+isAutoBatteryMappingEnabled(): boolean {
+  return (
+    this.dataProvider.featureFlags?.autoBatteryMapping === true ||
+    this.dataProvider.featureFlags?.autoComposedDevices === true
+  );
+}
+```
+
+Power and energy auto-mapping runs unconditionally for `switch`/`light` domains (no feature flag gate) because it only applies to domains where it's always beneficial.
+
+**Entity Resolution** (`BridgeRegistry.findBatteryEntityForDevice`, etc.)
+
+All `find*EntityForDevice()` methods search the **full HA registry** (`this.registry.entities`), not the filtered bridge entity list. This is critical because:
+- A bridge filter might include `switch.shelly_plug` but exclude `sensor.shelly_plug_power`
+- The power sensor must still be found and auto-assigned even though it's filtered out
+- The auto-assigned entity is then consumed (marked as used) and won't create its own endpoint
+
+**Duplicate Prevention**
+
+Each auto-assigned entity is tracked in a Set (`_usedBatteryEntities`, `_usedHumidityEntities`, etc.). Before creating any endpoint, `LegacyEndpoint.create()` checks if the entity was already consumed. If so, it's skipped:
+
+```typescript
+if (
+  registry.isAutoBatteryMappingEnabled() &&
+  registry.isBatteryEntityUsed(entityId)
+) {
+  return; // Skip — already merged into another endpoint
+}
+```
+
+**Matter Cluster Mapping**
+
+The auto-assigned entities are passed as `effectiveMapping` fields to `createLegacyEndpointType()`, which adds the corresponding Matter server behaviors:
+
+| Mapping Field | Matter Cluster | Server Behavior |
+|---|---|---|
+| `batteryEntity` | PowerSource (0x002F) | `PowerSourceServer` |
+| `humidityEntity` | RelativeHumidityMeasurement (0x0405) | `HumidityMeasurementServer` |
+| `pressureEntity` | PressureMeasurement (0x0403) | `PressureMeasurementServer` |
+| `powerEntity` | ElectricalPowerMeasurement (0x0090) | `ElectricalPowerMeasurementServer` |
+| `energyEntity` | ElectricalEnergyMeasurement (0x0091) | `ElectricalEnergyMeasurementServer` |
+
+Each server behavior independently subscribes to its source entity's state changes and updates its Matter attributes accordingly.
+
+#### Example: Shelly Plug S with Power Monitoring
+
+**Home Assistant entities** (same `device_id`):
+- `switch.shelly_plug_s` — state: on/off
+- `sensor.shelly_plug_s_power` — device_class: power, state: 42.5 (W)
+- `sensor.shelly_plug_s_energy` — device_class: energy, state: 123.4 (kWh)
+
+**Without autoComposedDevices** (3 separate Matter endpoints):
+- Endpoint 1: `OnOffPlugInUnitDevice` (switch) — `OnOff` cluster
+- Endpoint 2: Skipped (no Matter device type for power sensors)
+- Endpoint 3: Skipped (no Matter device type for energy sensors)
+
+**With autoComposedDevices** (1 composed Matter endpoint):
+- Endpoint 1: `OnOffPlugInUnitDevice` (switch) — `OnOff` + `ElectricalPowerMeasurement` + `ElectricalEnergyMeasurement` clusters
+
+#### Example: Aqara Temperature/Humidity/Pressure Sensor
+
+**Home Assistant entities** (same `device_id`):
+- `sensor.aqara_temperature` — device_class: temperature
+- `sensor.aqara_humidity` — device_class: humidity
+- `sensor.aqara_pressure` — device_class: atmospheric_pressure
+- `sensor.aqara_battery` — device_class: battery
+
+**Without autoComposedDevices** (4 separate Matter endpoints):
+- Endpoint 1: `TemperatureSensorDevice` — `TemperatureMeasurement`
+- Endpoint 2: `HumiditySensorDevice` — `RelativeHumidityMeasurement`
+- Endpoint 3: Skipped (no standalone pressure device type)
+- Endpoint 4: Skipped (battery sensor alone)
+
+**With autoComposedDevices** (1 composed Matter device with 3 sub-endpoints):
+- Parent: `BridgedNodeEndpoint` — `BridgedDeviceBasicInformation` + `PowerSource` (battery)
+  - Sub 1: `TemperatureSensorDevice` (0x0302) — `TemperatureMeasurement`
+  - Sub 2: `HumiditySensorDevice` (0x0307) — `RelativeHumidityMeasurement`
+  - Sub 3: `PressureSensorDevice` (0x0305) — `PressureMeasurement`
+
+**Controller behavior:**
+
+| Controller | Temperature | Humidity | Pressure | Battery |
+|---|---|---|---|---|
+| Apple Home | ✅ | ✅ | ❌ (unsupported device type) | ✅ |
+| Google Home | ✅ | ✅ | ✅ | ✅ |
+| Amazon Alexa | ✅ (separate) | ✅ (separate) | ? | ✅ |
+
+Sources: [Apple Support — Matter accessories](https://support.apple.com/en-us/102135) (lists supported sensor types), [matter.js ECOSYSTEMS.md](https://github.com/matter-js/matter.js/blob/main/docs/ECOSYSTEMS.md) (tested device type matrix).
+
+#### Configuration
+
+Enable via bridge configuration JSON or the UI:
+
+```json
+{
+  "featureFlags": {
+    "autoComposedDevices": true
+  }
+}
+```
+
+Or enable individual sub-features selectively:
+
+```json
+{
+  "featureFlags": {
+    "autoBatteryMapping": true,
+    "autoHumidityMapping": true,
+    "autoPressureMapping": true
+  }
+}
+```
+
+> **Note:** `autoComposedDevices` is a pure OR with each sub-flag. It never overrides an explicitly disabled sub-flag — it only adds. If `autoComposedDevices: true`, all sub-features are treated as enabled regardless of their individual values.
+
+#### Force Sync for Composed Devices
+
+When `autoForceSync` is enabled, the periodic force sync now recursively traverses all sub-endpoints of composed devices. Previously, only direct children of the aggregator were synced, which meant sub-endpoints of `ComposedSensorEndpoint` (temperature, humidity, pressure sensors) were missed during force sync cycles. This fix ensures that all sensor readings within composed devices stay in sync with controllers.
+
+#### Relevant Source Files
+
+| File | Purpose |
+|---|---|
+| `packages/common/src/bridge-data.ts` | `AllBridgeFeatureFlags` type definition |
+| `packages/common/src/schemas/bridge-config-schema.ts` | JSON schema for UI form generation |
+| `packages/backend/src/services/bridges/bridge-registry.ts` | Entity discovery, flag checks, `find*EntityForDevice()` |
+| `packages/backend/src/matter/endpoints/legacy/legacy-endpoint.ts` | Auto-assign logic, skip-if-used checks |
+| `packages/backend/src/matter/endpoints/legacy/create-legacy-endpoint-type.ts` | Endpoint type construction (flat mapping fallback) |
+| `packages/backend/src/matter/endpoints/composed/composed-sensor-endpoint.ts` | Composed device factory (BridgedNodeEndpoint + sub-endpoints) |
+| `packages/backend/src/services/bridges/bridge.ts` | Force sync logic with recursive sub-endpoint traversal |
+
+### Live Diagnostics (WebSocket Event Streaming)
+
+Real-time diagnostic event streaming integrated into the Health Dashboard. Emits events for bridge lifecycle changes (start/stop) with more event types planned. Events are streamed via WebSocket to subscribed clients.
+
+**How to use:**
+- Navigate to the **Health Dashboard** (`/health`)
+- The **Live Diagnostics** card shows real-time events with color-coded event types
+- Click the filter icon to show/hide specific event types
+- Event type chips show counts and act as toggle filters
+
+**Event types:** `bridge_started`, `bridge_stopped`, `state_update`, `command_received`, `entity_error`, `session_opened`, `session_closed`, `subscription_changed`
+
+**WebSocket protocol:**
+```json
+// Subscribe
+{ "type": "subscribe_diagnostics" }
+
+// Receive initial snapshot
+{ "type": "diagnostic_snapshot", "data": { "bridges": [...], "recentEvents": [...], "system": {...} } }
+
+// Receive live events
+{ "type": "diagnostic_event", "data": { "id": "diag_1", "timestamp": 1740000000000, "type": "bridge_started", "message": "Bridge started", "bridgeId": "...", "bridgeName": "..." } }
+
+// Unsubscribe
+{ "type": "unsubscribe_diagnostics" }
+```
+
+#### Live Diagnostics Dashboard Improvements
+
+**Bridge Cards (v2.1.0-alpha.10+):**
+- **Uniformly sized cards** — All bridge cards have consistent `minWidth: 280px`, `maxWidth: 480px`
+- **Self-adjusting layout** — Cards grow/shrink together with flexbox layout
+- **Alphabetical sorting** — Bridges sorted A-Z by name by default
+- **Chip-based info display** — Port, device count, fabric count shown as separate chips instead of text line
+- **Responsive grid** — Cards adapt: 1 (mobile) → 2 (tablet) → 2 (desktop) → 3 (lg) → 4 (xl) per row
+
+### Thermostat Auto-Resume Fix
+
+**Issue:** When a thermostat was off and you asked a voice assistant to "set temperature to 20°C", it only worked if the new temperature was different from the current setpoint. If already at 20°C, nothing happened.
+
+**Fix:** The thermostat now intercepts **all** setpoint writes via overridden class setters, not just value changes. When a write occurs while `systemMode` is `Off`, the device automatically resumes to Heat/Cool mode.
+
+**Works with:** Google Home, Alexa, Apple Home
+
+**Technical details:**
+- Overrides `occupiedHeatingSetpoint` and `occupiedCoolingSetpoint` setters in `ThermostatServerBase`
+- Tracks last setpoint values to distinguish initialization from user writes
+- Only auto-resumes for single-temp mode (not range/auto mode)
+- Uses `setSystemMode` config action to turn on the device
+
+### Vacuum "Docked" State Fix
+
+**Issue:** Vacuums showed "Paused" instead of "Docked" when idle and charging in their dock.
+
+**Fix:** Corrected the operational state mapping logic in `VacuumRvcOperationalStateServer`. Now properly detects charging state for vacuums that report `idle` while docked and charging (Ecovacs, some Roborock models).
+
+**Detection logic:**
+- If HA state is `docked` → shows `Docked`
+- If HA state is `idle` + charging detected → shows `Docked`  
+- If HA state is `idle` + not charging → shows `Paused`
+
+**Controller behavior:**
+- Apple Home: Shows correct "Charging" or "Docked" status
+- Google Home: Status displayed correctly
+- Alexa: Status displayed correctly
+
+### Memory Leak & Stability Fixes
+
+**Issue:** Long-running bridges could experience Out-Of-Memory (OOM) errors due to improper endpoint disposal.
+
+**Fix:** Fixed endpoint cleanup in disposal methods:
+- `BridgeEndpointManager.dispose()` now properly deletes all child endpoints
+- `ServerModeEndpointManager.dispose()` now properly deletes the device endpoint
+- Prevents accumulation of orphaned Matter.js objects in memory
+
+### Battery Sensor Log Spam Fix
+
+**Issue:** Logs were flooded with "No battery entity found" messages for devices without battery sensors.
+
+**Fix:** 
+- Added caching to `findBatteryEntityForDevice()` to avoid repeated searches
+- Reduced log level from `warn` to `debug` for missing battery sensors
+- Cache cleared on registry refresh to prevent stale data
 
 The following sections document features that are now in stable but provide detailed usage instructions.
 

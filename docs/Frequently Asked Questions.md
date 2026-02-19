@@ -176,3 +176,43 @@ When reporting Alpha issues, include:
 - Full logs from the add-on/container
 - Steps to reproduce
 - Controller type (Google, Apple, Alexa)
+
+## My thermostat doesn't turn on when I set the temperature
+
+Since v2.1.0-alpha, thermostats support **auto-resume** — when off and you set a temperature (even the same one), it automatically turns on. This works with all voice assistants.
+
+If not working:
+- Update to alpha v2.1.0-alpha.266+
+- Only works for single-temp mode (not range/auto)
+- Thermostat must be in "Off" state
+
+## Vacuum shows "Paused" instead of "Docked"
+
+Fixed in v2.1.0-alpha. Previously some vacuums (Ecovacs, some Roborock) reported `idle` while docked, showing as "Paused". Now correctly shows "Docked" when charging.
+
+## Too many "No battery entity found" log messages
+
+Fixed in v2.1.0-alpha. Battery sensor auto-mapping now uses caching and reduced log levels (debug only). Previously every entity without battery logged a warning.
+
+## Bridge runs out of memory after several days
+
+Fixed in v2.1.0-alpha. Endpoint disposal was improved in `BridgeEndpointManager` and `ServerModeEndpointManager`. Previously endpoints weren't cleaned up during restarts, causing memory leaks.
+
+## How do I use the Dashboard landing page?
+
+Since v2.1.0-alpha, the app opens with a **Dashboard** showing:
+- Bridge count, device count, fabric connections
+- Quick navigation to all pages
+- Bridge Wizard and Create Bridge buttons
+- Version and uptime
+
+Refreshes every 15 seconds.
+
+## What is "Auto Composed Devices"?
+
+**Auto Composed Devices** (`autoComposedDevices` feature flag, since v2.0.20) combines related entities from the same HA device into one Matter endpoint:
+- Temperature + Humidity + Pressure + Battery = one device
+- Switches/Lights with power/energy monitoring show consumption in one device
+- Uses real Matter Composed Devices with sub-endpoints for proper controller display
+
+Enable in Bridge Settings → Feature Flags.

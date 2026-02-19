@@ -79,6 +79,11 @@ Home, ...) are not placed in the same network segment. Please make sure to revie
 
 | Feature | Description |
 |---------|-------------|
+| **🔗 Auto Composed Devices** | Master toggle (`autoComposedDevices`) that creates real Matter Composed Devices for temperature sensors with related humidity/pressure/battery entities. Uses `BridgedNodeEndpoint` with separate sub-endpoints per sensor type so Apple Home and Alexa properly display each reading. Also enables power/energy auto-mapping for switches. See [Alpha Features Guide](./Guides/Alpha%20Features.md). |
+| **📊 Live Diagnostics** | Real-time event streaming in the Health Dashboard. Bridge lifecycle events, color-coded event types with filtering. WebSocket-based with subscribe/unsubscribe protocol. |
+| **🔧 DoorLock Fix** | Corrected `supportedOperatingModes` inverted bitmap semantics per Matter spec |
+| **⚡ Energy Event** | `ElectricalEnergyMeasurement` now emits `cumulativeEnergyMeasured` event per matter.js reference |
+| **🤖 Automation Fix** | `turnOff` now sends `automation.turn_off` (disable) instead of no-op |
 | **🏠 Dashboard** | New landing page with bridge overview, quick navigation, and Bridge Wizard access |
 | **🔍 Entity Autocomplete** | Search-as-you-type entity suggestions in Entity Mapping dialogs |
 | **⏱️ Light Transitions** | Matter transition times forwarded to HA `light.turn_on` service |

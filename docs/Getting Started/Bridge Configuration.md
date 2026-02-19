@@ -63,26 +63,29 @@ A include- or exclude-item is an object having a `type` and a `value` property.
 | `regex` | Regular expression matching entity IDs. Full regex support. | `^light\.(kitchen\|bedroom)_.*` |
 | `domain` | Match entities by their domain (the part before the dot). | `light`, `switch`, `sensor` |
 | `platform` | Match entities by their integration/platform. | `hue`, `zwave`, `mqtt` |
-| `entity_label` | Match entities by their label. Accepts the display name (e.g. `Voice Control`) or the slug (e.g. `voice_control`). Only checks entity-level labels. | `Voice Control` |
-| `device_label` | Match entities by their parent device's label. Accepts the display name or slug. Only checks device-level labels. | `smart_home` |
-| `label` | **(Deprecated)** Legacy filter — same behavior as `entity_label`. Use `entity_label` or `device_label` instead for clarity. | `voice_control` |
+| `entity_label` | Match entities by their label. Accepts display name or slug. Only checks entity-level labels. | `Voice Control` |
+| `device_label` | Match entities by their parent device's label. All entities of that device match. | `smart_home` |
 | `area` | Match entities by their area slug. | `living_room` |
 | `entity_category` | Match entities by their category. | `config`, `diagnostic` |
-| `device_name` | Match entities by their device name (case-insensitive, supports wildcards). | `Living Room*` |
-| `product_name` | Match entities by their device model/product name (case-insensitive, supports wildcards). | `Hue Color Bulb` |
-| `device_class` | Match entities by their device class attribute (e.g. temperature, motion, door). | `temperature` |
+| `device_name` | Match entities by their device name (case-insensitive, wildcards). | `Living Room*` |
+| `product_name` | Match entities by their product/model name (case-insensitive, wildcards). | `Hue Color Bulb` |
+| `device_class` | Match entities by their device class attribute. | `temperature`, `motion` |
+
+> [!NOTE]
+> The dropdown in the web UI now shows **tooltips** with detailed descriptions when hovering over each filter type.
+
+> [!WARNING]
+> The old `label` filter type is **deprecated** — use `entity_label` or `device_label` instead for clarity.
 
 ### Pattern vs Regex
 
 **Pattern** uses simple wildcard matching:
 - `*` matches any characters (zero or more)
-- All other characters are matched literally
-- Example: `light.living_room_*` matches `light.living_room_lamp`, `light.living_room_ceiling`
+- Example: `light.living_room_*` matches `light.living_room_lamp`
 
 **Regex** uses full JavaScript regular expressions:
-- More powerful and flexible
-- Can match complex patterns
-- Example: `^(light|switch)\.kitchen_.*` matches all lights and switches in the kitchen
+- More powerful for complex patterns
+- Example: `^(light|switch)\.kitchen_.*` matches kitchen lights and switches
 
 ### Device Name Filter
 
@@ -256,6 +259,23 @@ A comprehensive example using multiple filter types:
 This configuration:
 - **Includes**: All entities in the "living_room" area, entities with the "voice_control" label, and all lights starting with "guest_"
 - **Excludes**: Diagnostic and config entities, any entity ending with "_battery", and any device with "Test" in its name
+
+## Feature Flags
+
+Feature flags control advanced behavior of the bridge. Configure them in the **Bridge Settings → Feature Flags** section of the web UI.
+
+| Feature Flag | Description | Default |
+|--------------|-------------|---------|
+| `autoComposedDevices` | Master toggle: combines related entities (battery, humidity, pressure, power, energy) into single Matter endpoints. Enables all auto-mapping features at once. | `false` |
+| `autoBatteryMapping` | Automatically combines battery sensors with their parent device | `false` |
+| `autoHumidityMapping` | Automatically combines humidity sensors with temperature sensors | `true` |
+| `autoPressureMapping` | Automatically combines pressure sensors with temperature sensors | `true` |
+| `autoForceSync` | Periodically push all device states to controllers every 90 seconds. Enable if devices get out of sync. | `false` |
+| `coverSwapOpenClose` | Swap open/close commands for covers (fixes reversed Alexa commands) | `false` |
+| `coverDoNotInvertPercentage` | Skip percentage inversion for covers (not Matter-compliant) | `false` |
+| `coverUseHomeAssistantPercentage` | Use HA percentages directly (Alexa-friendly) | `false` |
+| `includeHiddenEntities` | Include entities marked as hidden in Home Assistant | `false` |
+| `serverMode` | Expose device as standalone Matter device (required for Robot Vacuums with Apple Home/Alexa). Only ONE device per bridge! | `false` |
 
 ## Issues with labels
 

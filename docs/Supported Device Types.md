@@ -275,12 +275,16 @@ Mapped based on `device_class` attribute.
 |--------------|-------------------|--------------------|
 | `running`, `plug`, `power`, `battery_charging`, `light` | OnOffSensor | On/Off |
 | `door`, `window`, `garage_door`, `opening`, `lock` | ContactSensor | Open/Closed |
-| `battery`, `cold`, `heat`, `connectivity`, `problem`, `safety`, `sound`, `tamper`, `update`, `vibration` | ContactSensor | Open/Closed |
+| `cold` | **WaterFreezeDetector** | Freeze/Normal |
+| `battery`, `heat`, `connectivity`, `problem`, `safety`, `sound`, `tamper`, `update`, `vibration` | ContactSensor | Open/Closed |
 | `motion`, `moving`, `occupancy`, `presence` | OccupancySensor | Occupied/Clear |
 | `moisture` | WaterLeakDetector | Leak/Dry |
 | `smoke` | SmokeCoAlarm (Smoke) | Alarm |
 | `carbon_monoxide`, `gas` | SmokeCoAlarm (CO) | Alarm |
 | Other / unset | OnOffSensor | On/Off |
+
+> [!NOTE]
+> **WaterFreezeDetector** (device class `cold`) is supported since v2.1.0-alpha. Shows freeze detection status in controllers.
 
 ---
 
