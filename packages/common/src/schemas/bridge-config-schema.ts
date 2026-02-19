@@ -1,5 +1,4 @@
 import type { JSONSchema7 } from "json-schema";
-import { HomeAssistantMatcherType } from "../home-assistant-filter.js";
 
 const homeAssistantMatcherSchema: JSONSchema7 = {
   type: "object",
@@ -8,9 +7,63 @@ const homeAssistantMatcherSchema: JSONSchema7 = {
     type: {
       title: "Type",
       type: "string",
-      enum: Object.values(HomeAssistantMatcherType).filter(
-        (t) => t !== HomeAssistantMatcherType.Label,
-      ),
+      oneOf: [
+        {
+          const: "pattern",
+          title: "pattern",
+          description: "Wildcard pattern matching entity IDs. Use * as wildcard. Example: 'light.living_room_*' matches all lights in the living room.",
+        },
+        {
+          const: "regex",
+          title: "regex",
+          description: "Full regular expression matching entity IDs. Use ^ and $ for anchors. Example: '^(light|switch)\\.kitchen_.*' matches all kitchen lights and switches.",
+        },
+        {
+          const: "domain",
+          title: "domain",
+          description: "Match entities by their domain (the part before the dot). Example: 'light', 'switch', 'sensor'.",
+        },
+        {
+          const: "platform",
+          title: "platform",
+          description: "Match entities by their integration/platform. Example: 'hue', 'zwave', 'mqtt'.",
+        },
+        {
+          const: "entity_label",
+          title: "entity_label",
+          description: "Match entities by their label (assigned directly to the entity). Use the label slug, not display name.",
+        },
+        {
+          const: "device_label",
+          title: "device_label",
+          description: "Match entities by their parent device's label (all entities of that device will match). Use the label slug.",
+        },
+        {
+          const: "area",
+          title: "area",
+          description: "Match entities by their area slug. Example: 'living_room', 'bedroom'.",
+        },
+        {
+          const: "entity_category",
+          title: "entity_category",
+          description: "Match entities by their category. Example: 'config', 'diagnostic' to exclude configuration entities.",
+        },
+        {
+          const: "device_name",
+          title: "device_name",
+          description: "Match entities by their device name. Supports wildcards. Example: '*Philips*' matches all Philips devices.",
+        },
+        {
+          const: "product_name",
+          title: "product_name",
+          description: "Match entities by their product/model name. Supports wildcards. Example: 'Hue*Bulb'.",
+        },
+        {
+          const: "device_class",
+          title: "device_class",
+          description: "Match entities by their device class attribute. Example: 'temperature', 'motion', 'door', 'window'.",
+        },
+      ],
     },
     value: {
       title: "Value",
