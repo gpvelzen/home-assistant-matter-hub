@@ -3,6 +3,7 @@ import {
   type UpdateBridgeRequest,
 } from "@home-assistant-matter-hub/common";
 import type { Environment, Logger } from "@matter/general";
+import type { Endpoint } from "@matter/main";
 import { SessionManager } from "@matter/main/protocol";
 import type { LoggerService } from "../../core/app/logger.js";
 import { BridgeServerNode } from "../../matter/endpoints/bridge-server-node.js";
@@ -246,11 +247,23 @@ export class Bridge {
       "../../matter/behaviors/home-assistant-entity-behavior.js"
     );
 
-    const endpoints = this.aggregator.parts;
+    // Collect all endpoints recursively to include sub-endpoints
+    // of composed devices (e.g., ComposedSensorEndpoint has T/H/P sub-endpoints)
+    const allEndpoints: Endpoint[] = [];
+    const collect = (ep: Endpoint) => {
+      allEndpoints.push(ep);
+      for (const child of ep.parts) {
+        collect(child);
+      }
+    };
+    for (const ep of this.aggregator.parts) {
+      collect(ep);
+    }
+
     let syncedCount = 0;
     let skippedCount = 0;
 
-    for (const endpoint of endpoints) {
+    for (const endpoint of allEndpoints) {
       try {
         if (!endpoint.behaviors.has(HomeAssistantEntityBehavior)) {
           continue;
