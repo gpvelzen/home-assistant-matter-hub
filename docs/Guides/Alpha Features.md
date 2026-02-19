@@ -97,9 +97,11 @@ The following features have graduated from Alpha to Stable:
 
 **Feature Flag:** `autoComposedDevices` (default: `false`)
 
-A master toggle that automatically combines related Home Assistant entities from the same physical device into single Matter endpoints. When enabled, it activates all auto-mapping sub-features at once: battery, humidity, pressure, power, and energy mapping.
+A master toggle that automatically combines related Home Assistant entities from the same physical device into Matter endpoints. When enabled, it activates all auto-mapping sub-features at once: battery, humidity, pressure, power, and energy mapping.
 
-This eliminates the need to enable individual auto-mapping flags separately and provides a cleaner device experience in Matter controllers. For example, a Shelly Plug with power monitoring appears as one Matter device with `OnOff` + `ElectricalPowerMeasurement` + `ElectricalEnergyMeasurement` clusters instead of three separate endpoints.
+For **temperature sensors** with auto-mapped humidity/pressure/battery, this flag creates **real Matter Composed Devices** — a `BridgedNodeEndpoint` parent with separate sub-endpoints for each sensor type. Each sub-endpoint uses its correct Matter device type, which is required for Apple Home, Google Home, and Amazon Alexa to properly recognize and display humidity and pressure readings.
+
+For **switches/lights** with auto-mapped power/energy, the clusters are added directly to the switch endpoint (flat mapping), since `ElectricalPowerMeasurement` and `ElectricalEnergyMeasurement` are valid optional clusters on those device types.
 
 #### How It Works
 
@@ -124,13 +126,25 @@ When each Matter endpoint is created, the auto-mapping logic runs in a strict or
 1. **Skip check** — If this entity was already consumed as a sub-entity (e.g., a humidity sensor already merged into a temperature endpoint), it is skipped entirely. No duplicate Matter endpoint is created.
 
 2. **Auto-assign in order** (only if `device_id` is present and no manual mapping exists):
-   - **Humidity → Temperature sensor** — Adds `RelativeHumidityMeasurement` cluster
-   - **Pressure → Temperature sensor** — Adds `PressureMeasurement` cluster
-   - **Battery → Any entity** — Adds `PowerSource` cluster (done last so battery goes to the combined T+H sensor, not separately)
-   - **Power → Switch/Light** — Adds `ElectricalPowerMeasurement` cluster
-   - **Energy → Switch/Light** — Adds `ElectricalEnergyMeasurement` cluster
+   - **Humidity → Temperature sensor**
+   - **Pressure → Temperature sensor**
+   - **Battery → Any entity** (done last so battery goes to the combined sensor, not separately)
+   - **Power → Switch/Light**
+   - **Energy → Switch/Light**
 
-3. **Endpoint type resolution** — `createLegacyEndpointType()` receives the effective mapping (original + auto-assigned entities) and constructs the appropriate `EndpointType` with all required behaviors/clusters.
+3. **Composed device check** — If `autoComposedDevices` is enabled and this is a temperature sensor with auto-mapped humidity or pressure, a `ComposedSensorEndpoint` is created instead of a flat endpoint. This produces a `BridgedNodeEndpoint` parent with separate sub-endpoints:
+
+   ```
+   BridgedNodeEndpoint (parent)
+   ├── BridgedDeviceBasicInformation + PowerSource (battery)
+   ├── TemperatureSensorDevice (0x0302) sub-endpoint
+   ├── HumiditySensorDevice (0x0307) sub-endpoint
+   └── PressureSensorDevice (0x0305) sub-endpoint
+   ```
+
+   Each sub-endpoint has its own `HomeAssistantEntityBehavior` and reads directly from its own HA entity state.
+
+4. **Flat endpoint fallback** — For switches/lights or if `autoComposedDevices` is not enabled, `createLegacyEndpointType()` adds the extra clusters directly to the primary endpoint type.
 
 #### Implementation Details
 
@@ -212,8 +226,21 @@ Each server behavior independently subscribes to its source entity's state chang
 - Endpoint 3: Skipped (no standalone pressure device type)
 - Endpoint 4: Skipped (battery sensor alone)
 
-**With autoComposedDevices** (1 composed Matter endpoint):
-- Endpoint 1: `TemperatureSensorDevice` — `TemperatureMeasurement` + `RelativeHumidityMeasurement` + `PressureMeasurement` + `PowerSource` clusters
+**With autoComposedDevices** (1 composed Matter device with 3 sub-endpoints):
+- Parent: `BridgedNodeEndpoint` — `BridgedDeviceBasicInformation` + `PowerSource` (battery)
+  - Sub 1: `TemperatureSensorDevice` (0x0302) — `TemperatureMeasurement`
+  - Sub 2: `HumiditySensorDevice` (0x0307) — `RelativeHumidityMeasurement`
+  - Sub 3: `PressureSensorDevice` (0x0305) — `PressureMeasurement`
+
+**Controller behavior:**
+
+| Controller | Temperature | Humidity | Pressure | Battery |
+|---|---|---|---|---|
+| Apple Home | ✅ | ✅ | ❌ (unsupported device type) | ✅ |
+| Google Home | ✅ | ✅ | ✅ | ✅ |
+| Amazon Alexa | ✅ (separate) | ✅ (separate) | ? | ✅ |
+
+Sources: [Apple Support — Matter accessories](https://support.apple.com/en-us/102135) (lists supported sensor types), [matter.js ECOSYSTEMS.md](https://github.com/matter-js/matter.js/blob/main/docs/ECOSYSTEMS.md) (tested device type matrix).
 
 #### Configuration
 
@@ -249,7 +276,8 @@ Or enable individual sub-features selectively:
 | `packages/common/src/schemas/bridge-config-schema.ts` | JSON schema for UI form generation |
 | `packages/backend/src/services/bridges/bridge-registry.ts` | Entity discovery, flag checks, `find*EntityForDevice()` |
 | `packages/backend/src/matter/endpoints/legacy/legacy-endpoint.ts` | Auto-assign logic, skip-if-used checks |
-| `packages/backend/src/matter/endpoints/legacy/create-legacy-endpoint-type.ts` | Endpoint type construction with composed clusters |
+| `packages/backend/src/matter/endpoints/legacy/create-legacy-endpoint-type.ts` | Endpoint type construction (flat mapping fallback) |
+| `packages/backend/src/matter/endpoints/composed/composed-sensor-endpoint.ts` | Composed device factory (BridgedNodeEndpoint + sub-endpoints) |
 
 ### Live Diagnostics (WebSocket Event Streaming)
 
