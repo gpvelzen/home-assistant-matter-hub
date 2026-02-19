@@ -17,10 +17,8 @@ export interface OnOffConfig {
   turnOff?: ValueSetter<void> | null;
 }
 
-const FeaturedBase = Base.with("Lighting");
-
 // biome-ignore lint/correctness/noUnusedVariables: Biome thinks this is unused, but it's used by the function below
-class OnOffServerBase extends FeaturedBase {
+class OnOffServerBase extends Base {
   declare state: OnOffServerBase.State;
 
   override async initialize() {
@@ -91,7 +89,7 @@ class OnOffServerBase extends FeaturedBase {
 }
 
 namespace OnOffServerBase {
-  export class State extends FeaturedBase.State {
+  export class State extends Base.State {
     config!: OnOffConfig;
   }
 }

@@ -12,7 +12,7 @@ const RemoteOnOffServer = OnOffServer({
   turnOff: () => ({
     action: "remote.turn_off",
   }),
-}).with("Lighting");
+});
 
 const RemoteEndpointType = OnOffPlugInUnitDevice.with(
   BasicInformationServer,

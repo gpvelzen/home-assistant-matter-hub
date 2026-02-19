@@ -9,7 +9,7 @@ import { IdentifyServer } from "../../../behaviors/identify-server.js";
 import { OnOffServer } from "../../../behaviors/on-off-server.js";
 import { PowerSourceServer } from "../../../behaviors/power-source-server.js";
 
-const SwitchOnOffServer = OnOffServer().with("Lighting");
+const SwitchOnOffServer = OnOffServer();
 
 const SwitchEndpointType = OnOffPlugInUnitDevice.with(
   BasicInformationServer,
