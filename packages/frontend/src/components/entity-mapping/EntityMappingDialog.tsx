@@ -65,6 +65,7 @@ export function EntityMappingDialog({
   const [powerEntity, setPowerEntity] = useState("");
   const [energyEntity, setEnergyEntity] = useState("");
   const [suctionLevelEntity, setSuctionLevelEntity] = useState("");
+  const [mopIntensityEntity, setMopIntensityEntity] = useState("");
   const [availableButtons, setAvailableButtons] = useState<RelatedButton[]>([]);
   const [loadingButtons, setLoadingButtons] = useState(false);
 
@@ -86,6 +87,7 @@ export function EntityMappingDialog({
       setPowerEntity(currentMapping?.powerEntity || "");
       setEnergyEntity(currentMapping?.energyEntity || "");
       setSuctionLevelEntity(currentMapping?.suctionLevelEntity || "");
+      setMopIntensityEntity(currentMapping?.mopIntensityEntity || "");
       setAvailableButtons([]);
     }
   }, [open, entityId, currentMapping]);
@@ -135,6 +137,7 @@ export function EntityMappingDialog({
       powerEntity: powerEntity.trim() || undefined,
       energyEntity: energyEntity.trim() || undefined,
       suctionLevelEntity: suctionLevelEntity.trim() || undefined,
+      mopIntensityEntity: mopIntensityEntity.trim() || undefined,
     });
   }, [
     editEntityId,
@@ -151,6 +154,7 @@ export function EntityMappingDialog({
     powerEntity,
     energyEntity,
     suctionLevelEntity,
+    mopIntensityEntity,
     onSave,
   ]);
 
@@ -279,6 +283,14 @@ export function EntityMappingDialog({
               label="Suction Level Entity (optional)"
               placeholder="select.vacuum_suction_level"
               helperText="Select entity that controls suction level. Adds Quiet/Max intensity options to Apple Home's extra features panel."
+              domain="select"
+            />
+            <EntityAutocomplete
+              value={mopIntensityEntity}
+              onChange={setMopIntensityEntity}
+              label="Mop Intensity Entity (optional)"
+              placeholder="select.vacuum_mop_pad_humidity"
+              helperText="Select entity that controls mop water level / intensity. Adds intensity options when mopping in Apple Home."
               domain="select"
             />
           </>

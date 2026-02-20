@@ -9,6 +9,7 @@ import {
   createDefaultRvcCleanModeServer,
   createVacuumRvcCleanModeServer,
   resolveFanSpeedList,
+  resolveMopIntensityList,
   supportsCleaningModes,
 } from "./behaviors/vacuum-rvc-clean-mode-server.js";
 import { VacuumRvcOperationalStateServer } from "./behaviors/vacuum-rvc-operational-state-server.js";
@@ -94,9 +95,16 @@ export function ServerModeVacuumDevice(
     attributes,
     homeAssistantEntity.mapping?.suctionLevelEntity,
   );
+  const mopIntensityList = resolveMopIntensityList(
+    homeAssistantEntity.mapping?.mopIntensityEntity,
+  );
   if (supportsCleaningModes(attributes) || hasCleaningModeEntity) {
     device = device.with(
-      createVacuumRvcCleanModeServer(attributes, fanSpeedList),
+      createVacuumRvcCleanModeServer(
+        attributes,
+        fanSpeedList,
+        mopIntensityList,
+      ),
     );
   } else {
     device = device.with(createDefaultRvcCleanModeServer());

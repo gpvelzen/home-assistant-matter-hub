@@ -222,6 +222,7 @@ export function backupApi(
                     powerEntity: config.powerEntity,
                     energyEntity: config.energyEntity,
                     suctionLevelEntity: config.suctionLevelEntity,
+                    mopIntensityEntity: config.mopIntensityEntity,
                   });
                   mappingsRestored++;
                 }

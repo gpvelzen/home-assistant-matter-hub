@@ -14,6 +14,7 @@ import {
   createDefaultRvcCleanModeServer,
   createVacuumRvcCleanModeServer,
   resolveFanSpeedList,
+  resolveMopIntensityList,
   supportsCleaningModes,
 } from "./behaviors/vacuum-rvc-clean-mode-server.js";
 import { VacuumRvcOperationalStateServer } from "./behaviors/vacuum-rvc-operational-state-server.js";
@@ -90,12 +91,19 @@ export function VacuumDevice(
     attributes,
     homeAssistantEntity.mapping?.suctionLevelEntity,
   );
+  const mopIntensityList = resolveMopIntensityList(
+    homeAssistantEntity.mapping?.mopIntensityEntity,
+  );
   if (supportsCleaningModes(attributes) || hasCleaningModeEntity) {
     logger.info(
-      `${entityId}: Adding RvcCleanMode (multi-mode, isDreame=${supportsCleaningModes(attributes)}, mappedEntity=${hasCleaningModeEntity}, fanSpeedList=${JSON.stringify(fanSpeedList ?? [])})`,
+      `${entityId}: Adding RvcCleanMode (multi-mode, isDreame=${supportsCleaningModes(attributes)}, mappedEntity=${hasCleaningModeEntity}, fanSpeedList=${JSON.stringify(fanSpeedList ?? [])}, mopIntensityList=${JSON.stringify(mopIntensityList ?? [])})`,
     );
     device = device.with(
-      createVacuumRvcCleanModeServer(attributes, fanSpeedList),
+      createVacuumRvcCleanModeServer(
+        attributes,
+        fanSpeedList,
+        mopIntensityList,
+      ),
     );
   } else {
     logger.info(`${entityId}: Adding RvcCleanMode (default single-mode)`);

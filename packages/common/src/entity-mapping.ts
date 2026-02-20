@@ -107,6 +107,14 @@ export interface EntityMappingConfig {
    * Example: "select.r2_d2_suction_level"
    */
   readonly suctionLevelEntity?: string;
+  /**
+   * Optional: Entity ID of a select entity that controls the vacuum mop intensity / water level.
+   * Used for Dreame/Ecovacs vacuums where mop intensity is a separate select entity.
+   * When configured, intensity variants are added to the Mop cleaning mode,
+   * enabling Apple Home's "extra features" panel when mopping.
+   * Example: "select.r2_d2_mop_pad_humidity"
+   */
+  readonly mopIntensityEntity?: string;
 }
 
 export interface EntityMappingRequest {
@@ -125,6 +133,7 @@ export interface EntityMappingRequest {
   readonly powerEntity?: string;
   readonly energyEntity?: string;
   readonly suctionLevelEntity?: string;
+  readonly mopIntensityEntity?: string;
 }
 
 export interface EntityMappingResponse {
