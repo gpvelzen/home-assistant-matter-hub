@@ -64,12 +64,19 @@ function buildSupportedCleanModes(): RvcCleanMode.ModeOption[] {
     {
       label: "Sweeping and mopping",
       mode: DreameCleaningMode.SweepingAndMopping,
-      modeTags: [{ value: RvcCleanMode.ModeTag.DeepClean }],
+      modeTags: [
+        { value: RvcCleanMode.ModeTag.Vacuum },
+        { value: RvcCleanMode.ModeTag.Mop },
+      ],
     },
     {
       label: "Mopping after sweeping",
       mode: DreameCleaningMode.MoppingAfterSweeping,
-      modeTags: [{ value: RvcCleanMode.ModeTag.VacuumThenMop }],
+      modeTags: [
+        { value: RvcCleanMode.ModeTag.DeepClean },
+        { value: RvcCleanMode.ModeTag.Vacuum },
+        { value: RvcCleanMode.ModeTag.Mop },
+      ],
     },
   ];
 }
