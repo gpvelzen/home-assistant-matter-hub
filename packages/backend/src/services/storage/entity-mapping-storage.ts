@@ -113,6 +113,11 @@ export class EntityMappingStorage extends Service {
       humidityEntity: request.humidityEntity?.trim() || undefined,
       batteryEntity: request.batteryEntity?.trim() || undefined,
       roomEntities: roomEntities.length > 0 ? roomEntities : undefined,
+      disableLockPin: request.disableLockPin || undefined,
+      powerEntity: request.powerEntity?.trim() || undefined,
+      energyEntity: request.energyEntity?.trim() || undefined,
+      pressureEntity: request.pressureEntity?.trim() || undefined,
+      suctionLevelEntity: request.suctionLevelEntity?.trim() || undefined,
     };
 
     if (
@@ -123,7 +128,12 @@ export class EntityMappingStorage extends Service {
       !config.cleaningModeEntity &&
       !config.humidityEntity &&
       !config.batteryEntity &&
-      !config.roomEntities
+      !config.roomEntities &&
+      !config.disableLockPin &&
+      !config.powerEntity &&
+      !config.energyEntity &&
+      !config.pressureEntity &&
+      !config.suctionLevelEntity
     ) {
       bridgeMap.delete(request.entityId);
     } else {

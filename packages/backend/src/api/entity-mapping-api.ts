@@ -41,6 +41,7 @@ export function entityMappingApi(
       disableLockPin: body.disableLockPin,
       powerEntity: body.powerEntity,
       energyEntity: body.energyEntity,
+      suctionLevelEntity: body.suctionLevelEntity,
     };
 
     const config = await mappingStorage.setMapping(request);

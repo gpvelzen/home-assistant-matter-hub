@@ -27,6 +27,36 @@ export enum DreameCleaningMode {
 }
 
 /**
+ * Suction intensity levels mapped to ModeBase standard tags.
+ * Standard (0) has no extra tag; Quiet and Max add modifier tags that
+ * Apple Home shows in the "extra features" panel.
+ */
+enum SuctionIntensity {
+  Standard = 0,
+  Quiet = 1,
+  Max = 2,
+}
+
+const SUCTION_MULTIPLIER = 10;
+
+function encodeMode(
+  cleanMode: DreameCleaningMode,
+  suction: SuctionIntensity,
+): number {
+  return cleanMode * SUCTION_MULTIPLIER + suction;
+}
+
+function decodeMode(mode: number): {
+  cleanMode: DreameCleaningMode;
+  suction: SuctionIntensity;
+} {
+  return {
+    cleanMode: Math.floor(mode / SUCTION_MULTIPLIER) as DreameCleaningMode,
+    suction: (mode % SUCTION_MULTIPLIER) as SuctionIntensity,
+  };
+}
+
+/**
  * Map Dreame cleaning mode string to our internal mode value
  */
 function parseDreameCleaningMode(modeString: string | undefined): number {
@@ -46,39 +76,91 @@ function parseDreameCleaningMode(modeString: string | undefined): number {
 }
 
 /**
- * Build supported cleaning modes for vacuum.
- * For Dreame vacuums, these are: Sweeping, Mopping, Sweeping and mopping, Mopping after sweeping
+ * Base mode tag sets for each cleaning type.
+ */
+const CLEAN_MODE_TAGS: Record<
+  DreameCleaningMode,
+  RvcCleanMode.ModeTagStruct[]
+> = {
+  [DreameCleaningMode.Sweeping]: [{ value: RvcCleanMode.ModeTag.Vacuum }],
+  [DreameCleaningMode.Mopping]: [{ value: RvcCleanMode.ModeTag.Mop }],
+  [DreameCleaningMode.SweepingAndMopping]: [
+    { value: RvcCleanMode.ModeTag.Vacuum },
+    { value: RvcCleanMode.ModeTag.Mop },
+  ],
+  [DreameCleaningMode.MoppingAfterSweeping]: [
+    { value: RvcCleanMode.ModeTag.DeepClean },
+    { value: RvcCleanMode.ModeTag.Vacuum },
+    { value: RvcCleanMode.ModeTag.Mop },
+  ],
+};
+
+const CLEAN_MODE_LABELS: Record<DreameCleaningMode, string> = {
+  [DreameCleaningMode.Sweeping]: "Sweeping",
+  [DreameCleaningMode.Mopping]: "Mopping",
+  [DreameCleaningMode.SweepingAndMopping]: "Sweeping and mopping",
+  [DreameCleaningMode.MoppingAfterSweeping]: "Mopping after sweeping",
+};
+
+/**
+ * Build supported cleaning modes without suction variants (4 modes).
  */
 function buildSupportedCleanModes(): RvcCleanMode.ModeOption[] {
-  return [
-    {
-      label: "Sweeping",
-      mode: DreameCleaningMode.Sweeping,
-      modeTags: [{ value: RvcCleanMode.ModeTag.Vacuum }],
-    },
-    {
-      label: "Mopping",
-      mode: DreameCleaningMode.Mopping,
-      modeTags: [{ value: RvcCleanMode.ModeTag.Mop }],
-    },
-    {
-      label: "Sweeping and mopping",
-      mode: DreameCleaningMode.SweepingAndMopping,
-      modeTags: [
-        { value: RvcCleanMode.ModeTag.Vacuum },
-        { value: RvcCleanMode.ModeTag.Mop },
-      ],
-    },
-    {
-      label: "Mopping after sweeping",
-      mode: DreameCleaningMode.MoppingAfterSweeping,
-      modeTags: [
-        { value: RvcCleanMode.ModeTag.DeepClean },
-        { value: RvcCleanMode.ModeTag.Vacuum },
-        { value: RvcCleanMode.ModeTag.Mop },
-      ],
-    },
+  const cleanTypes = [
+    DreameCleaningMode.Sweeping,
+    DreameCleaningMode.Mopping,
+    DreameCleaningMode.SweepingAndMopping,
+    DreameCleaningMode.MoppingAfterSweeping,
   ];
+  return cleanTypes.map((ct) => ({
+    label: CLEAN_MODE_LABELS[ct],
+    mode: ct,
+    modeTags: [...CLEAN_MODE_TAGS[ct]],
+  }));
+}
+
+/**
+ * Build supported cleaning modes WITH suction intensity variants (12 modes).
+ * Each cleaning type gets Standard/Quiet/Max variants.
+ * Apple Home shows Quiet and Max as toggles in the "extra features" panel.
+ */
+function buildSupportedCleanModesWithSuction(): RvcCleanMode.ModeOption[] {
+  const cleanTypes = [
+    DreameCleaningMode.Sweeping,
+    DreameCleaningMode.Mopping,
+    DreameCleaningMode.SweepingAndMopping,
+    DreameCleaningMode.MoppingAfterSweeping,
+  ];
+
+  const modes: RvcCleanMode.ModeOption[] = [];
+
+  for (const ct of cleanTypes) {
+    const baseTags = CLEAN_MODE_TAGS[ct];
+    const baseLabel = CLEAN_MODE_LABELS[ct];
+
+    // Standard — no extra tag
+    modes.push({
+      label: baseLabel,
+      mode: encodeMode(ct, SuctionIntensity.Standard),
+      modeTags: [...baseTags],
+    });
+
+    // Quiet — adds Quiet modifier tag
+    modes.push({
+      label: `${baseLabel} (Quiet)`,
+      mode: encodeMode(ct, SuctionIntensity.Quiet),
+      modeTags: [...baseTags, { value: RvcCleanMode.ModeTag.Quiet }],
+    });
+
+    // Max — adds Max modifier tag
+    modes.push({
+      label: `${baseLabel} (Max)`,
+      mode: encodeMode(ct, SuctionIntensity.Max),
+      modeTags: [...baseTags, { value: RvcCleanMode.ModeTag.Max }],
+    });
+  }
+
+  return modes;
 }
 
 /**
@@ -154,20 +236,90 @@ function findMatchingOption(
 }
 
 /**
+ * Aliases for suction level options, ordered low → high.
+ */
+const SUCTION_QUIET_ALIASES = [
+  "quiet",
+  "silent",
+  "low",
+  "eco",
+  "gentle",
+];
+
+const SUCTION_MAX_ALIASES = [
+  "turbo",
+  "max",
+  "strong",
+  "boost",
+  "power",
+  "high",
+  "full",
+];
+
+/**
+ * Find the suction option string that best matches the requested intensity.
+ */
+function findSuctionOption(
+  intensity: SuctionIntensity,
+  availableOptions: string[] | undefined,
+): string | undefined {
+  if (!availableOptions || availableOptions.length === 0) return undefined;
+
+  const aliases =
+    intensity === SuctionIntensity.Quiet
+      ? SUCTION_QUIET_ALIASES
+      : SUCTION_MAX_ALIASES;
+
+  for (const alias of aliases) {
+    const match = availableOptions.find(
+      (opt) => opt.toLowerCase() === alias.toLowerCase(),
+    );
+    if (match) return match;
+  }
+
+  for (const alias of aliases) {
+    const match = availableOptions.find((opt) =>
+      opt.toLowerCase().includes(alias),
+    );
+    if (match) return match;
+  }
+
+  // Fallback: first option for quiet, last option for max
+  if (intensity === SuctionIntensity.Quiet) return availableOptions[0];
+  return availableOptions[availableOptions.length - 1];
+}
+
+/**
+ * Determine current suction intensity from the suction level entity state.
+ */
+function parseSuctionIntensity(
+  suctionState: string | undefined,
+): SuctionIntensity {
+  if (!suctionState) return SuctionIntensity.Standard;
+
+  const lower = suctionState.toLowerCase();
+
+  for (const alias of SUCTION_QUIET_ALIASES) {
+    if (lower === alias || lower.includes(alias)) {
+      return SuctionIntensity.Quiet;
+    }
+  }
+
+  for (const alias of SUCTION_MAX_ALIASES) {
+    if (lower === alias || lower.includes(alias)) {
+      return SuctionIntensity.Max;
+    }
+  }
+
+  return SuctionIntensity.Standard;
+}
+
+/**
  * Get the Dreame cleaning mode string from our internal mode value
  * @deprecated Use findMatchingOption with available options instead
  */
 function getDreameCleaningModeString(mode: number): string {
-  switch (mode) {
-    case DreameCleaningMode.Mopping:
-      return "Mopping";
-    case DreameCleaningMode.SweepingAndMopping:
-      return "Sweeping and mopping";
-    case DreameCleaningMode.MoppingAfterSweeping:
-      return "Mopping after sweeping";
-    default:
-      return "Sweeping";
-  }
+  return CLEAN_MODE_LABELS[mode as DreameCleaningMode] ?? "Sweeping";
 }
 
 /**
@@ -208,97 +360,160 @@ function getCleaningModeSelectEntity(agent: Agent): string {
   return derivedEntity;
 }
 
-const vacuumRvcCleanModeConfig = {
-  getCurrentMode: (entity: { attributes: unknown }, agent: Agent): number => {
-    // First: try the vacuum entity's own cleaning_mode attribute (reactive via onChange)
-    // Some Dreame vacuums expose this directly on the vacuum entity
-    const attributes = entity.attributes as VacuumDeviceAttributes & {
-      cleaning_mode?: string;
-    };
-    if (attributes.cleaning_mode) {
-      const currentMode = parseDreameCleaningMode(attributes.cleaning_mode);
+/**
+ * Read a select entity's current state and options.
+ */
+function readSelectEntity(
+  entityId: string,
+  agent: Agent,
+): { state?: string; options?: string[] } {
+  const stateProvider = agent.env.get(EntityStateProvider);
+  const entityState = stateProvider.getState(entityId);
+  if (!entityState) return {};
+  const attrs = entityState.attributes as { options?: string[] } | undefined;
+  return {
+    state: entityState.state as string | undefined,
+    options: attrs?.options,
+  };
+}
+
+function createCleanModeConfig(hasSuction: boolean) {
+  return {
+    getCurrentMode: (
+      entity: { attributes: unknown },
+      agent: Agent,
+    ): number => {
+      // Determine current cleaning type
+      const attributes = entity.attributes as VacuumDeviceAttributes & {
+        cleaning_mode?: string;
+      };
+      let cleanMode: DreameCleaningMode;
+
+      if (attributes.cleaning_mode) {
+        cleanMode = parseDreameCleaningMode(
+          attributes.cleaning_mode,
+        ) as DreameCleaningMode;
+        logger.debug(
+          `Current cleaning mode from vacuum entity: "${attributes.cleaning_mode}" -> ${getDreameCleaningModeString(cleanMode)}`,
+        );
+      } else {
+        const selectEntityId = getCleaningModeSelectEntity(agent);
+        const { state } = readSelectEntity(selectEntityId, agent);
+        cleanMode = parseDreameCleaningMode(state) as DreameCleaningMode;
+        logger.debug(
+          `Current cleaning mode from ${selectEntityId}: "${state}" -> ${getDreameCleaningModeString(cleanMode)}`,
+        );
+      }
+
+      if (!hasSuction) return cleanMode;
+
+      // Determine current suction intensity
+      const mapping = agent.get(HomeAssistantEntityBehavior).state.mapping;
+      const suctionEntityId = mapping?.suctionLevelEntity;
+      if (!suctionEntityId)
+        return encodeMode(cleanMode, SuctionIntensity.Standard);
+
+      const { state: suctionState } = readSelectEntity(suctionEntityId, agent);
+      const suction = parseSuctionIntensity(suctionState);
+      const encoded = encodeMode(cleanMode, suction);
       logger.debug(
-        `Current cleaning mode from vacuum entity: "${attributes.cleaning_mode}" -> ${getDreameCleaningModeString(currentMode)}`,
+        `Current suction from ${suctionEntityId}: "${suctionState}" -> intensity=${SuctionIntensity[suction]}, encoded=${encoded}`,
       );
-      return currentMode;
-    }
+      return encoded;
+    },
 
-    // Fallback: read from the separate select entity via EntityStateProvider
-    // Note: This is NOT reactive — updates only arrive when the vacuum entity itself changes
-    const selectEntityId = getCleaningModeSelectEntity(agent);
-    const stateProvider = agent.env.get(EntityStateProvider);
-    const selectState = stateProvider.getState(selectEntityId);
+    getSupportedModes: () =>
+      hasSuction
+        ? buildSupportedCleanModesWithSuction()
+        : buildSupportedCleanModes(),
 
-    const currentOption = selectState?.state as string | undefined;
-    const currentMode = parseDreameCleaningMode(currentOption);
-
-    logger.debug(
-      `Current cleaning mode from ${selectEntityId}: "${currentOption}" -> ${getDreameCleaningModeString(currentMode)}`,
-    );
-    return currentMode;
-  },
-
-  getSupportedModes: () => buildSupportedCleanModes(),
-
-  setCleanMode: (mode: number, agent: Agent) => {
-    const selectEntityId = getCleaningModeSelectEntity(agent);
-
-    // Get available options from the select entity state
-    const stateProvider = agent.env.get(EntityStateProvider);
-    const selectState = stateProvider.getState(selectEntityId);
-    const selectAttributes = selectState?.attributes as
-      | { options?: string[] }
-      | undefined;
-    const availableOptions = selectAttributes?.options;
-
-    if (availableOptions) {
-      logger.debug(
-        `Available cleaning mode options for ${selectEntityId}: [${availableOptions.join(", ")}]`,
+    setCleanMode: (mode: number, agent: Agent) => {
+      const selectEntityId = getCleaningModeSelectEntity(agent);
+      const { options: availableOptions } = readSelectEntity(
+        selectEntityId,
+        agent,
       );
-    }
 
-    // Find the best matching option for this mode
-    const optionToUse = findMatchingOption(
-      mode as DreameCleaningMode,
-      availableOptions,
-    );
+      if (availableOptions) {
+        logger.debug(
+          `Available cleaning mode options for ${selectEntityId}: [${availableOptions.join(", ")}]`,
+        );
+      }
 
-    logger.info(
-      `Setting cleaning mode to: ${optionToUse} (mode=${mode}) via ${selectEntityId}`,
-    );
+      const cleanMode = hasSuction
+        ? decodeMode(mode).cleanMode
+        : (mode as DreameCleaningMode);
+      const suction = hasSuction
+        ? decodeMode(mode).suction
+        : SuctionIntensity.Standard;
 
-    // Dreame vacuums use a separate select entity for cleaning mode
-    // Note: If the select entity is unavailable (e.g., vacuum in CleanGenius mode),
-    // the action will fail. User should keep vacuum in "Custom" mode.
-    return {
-      action: "select.select_option",
-      data: {
-        option: optionToUse,
-      },
-      target: selectEntityId,
-    };
-  },
-};
+      const optionToUse = findMatchingOption(cleanMode, availableOptions);
+
+      logger.info(
+        `Setting cleaning mode to: ${optionToUse} (mode=${mode}, clean=${getDreameCleaningModeString(cleanMode)}, suction=${SuctionIntensity[suction]}) via ${selectEntityId}`,
+      );
+
+      // If suction entity is configured and intensity changed, set it too
+      if (hasSuction && suction !== SuctionIntensity.Standard) {
+        const mapping = agent.get(HomeAssistantEntityBehavior).state.mapping;
+        const suctionEntityId = mapping?.suctionLevelEntity;
+        if (suctionEntityId) {
+          const { options: suctionOptions } = readSelectEntity(
+            suctionEntityId,
+            agent,
+          );
+          const suctionOption = findSuctionOption(suction, suctionOptions);
+          if (suctionOption) {
+            logger.info(
+              `Setting suction level to: ${suctionOption} via ${suctionEntityId}`,
+            );
+            const homeAssistant = agent.get(HomeAssistantEntityBehavior);
+            homeAssistant.callAction({
+              action: "select.select_option",
+              data: { option: suctionOption },
+              target: suctionEntityId,
+            });
+          }
+        }
+      }
+
+      return {
+        action: "select.select_option",
+        data: { option: optionToUse },
+        target: selectEntityId,
+      };
+    },
+  };
+}
 
 /**
  * Create a VacuumRvcCleanModeServer with Dreame cleaning modes.
+ * When hasSuction is true, each cleaning type gets Quiet/Max intensity
+ * variants that enable Apple Home's "extra features" panel.
  */
 export function createVacuumRvcCleanModeServer(
   _attributes: VacuumDeviceAttributes,
+  hasSuction = false,
 ): ReturnType<typeof RvcCleanModeServer> {
-  const supportedModes = buildSupportedCleanModes();
+  const supportedModes = hasSuction
+    ? buildSupportedCleanModesWithSuction()
+    : buildSupportedCleanModes();
 
   logger.info(
-    `Creating VacuumRvcCleanModeServer with ${supportedModes.length} cleaning modes`,
+    `Creating VacuumRvcCleanModeServer with ${supportedModes.length} cleaning modes (suction=${hasSuction})`,
   );
-  logger.info(`Modes: ${supportedModes.map((m) => m.label).join(", ")}`);
+  logger.info(
+    `Modes: ${supportedModes.map((m) => `${m.mode}:${m.label}`).join(", ")}`,
+  );
 
   const initialState: RvcCleanModeServerInitialState = {
     supportedModes,
-    currentMode: DreameCleaningMode.Sweeping,
+    currentMode: hasSuction
+      ? encodeMode(DreameCleaningMode.Sweeping, SuctionIntensity.Standard)
+      : DreameCleaningMode.Sweeping,
   };
 
-  return RvcCleanModeServer(vacuumRvcCleanModeConfig, initialState);
+  return RvcCleanModeServer(createCleanModeConfig(hasSuction), initialState);
 }
 
 /**

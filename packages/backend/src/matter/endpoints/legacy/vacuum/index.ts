@@ -81,11 +81,14 @@ export function VacuumDevice(
   // Alexa probes for cluster 0x55 during discovery and may refuse the device without it.
   const hasCleaningModeEntity =
     !!homeAssistantEntity.mapping?.cleaningModeEntity;
+  const hasSuctionLevel = !!homeAssistantEntity.mapping?.suctionLevelEntity;
   if (supportsCleaningModes(attributes) || hasCleaningModeEntity) {
     logger.info(
-      `${entityId}: Adding RvcCleanMode (multi-mode, isDreame=${supportsCleaningModes(attributes)}, mappedEntity=${hasCleaningModeEntity})`,
+      `${entityId}: Adding RvcCleanMode (multi-mode, isDreame=${supportsCleaningModes(attributes)}, mappedEntity=${hasCleaningModeEntity}, suction=${hasSuctionLevel})`,
     );
-    device = device.with(createVacuumRvcCleanModeServer(attributes));
+    device = device.with(
+      createVacuumRvcCleanModeServer(attributes, hasSuctionLevel),
+    );
   } else {
     logger.info(`${entityId}: Adding RvcCleanMode (default single-mode)`);
     device = device.with(createDefaultRvcCleanModeServer());

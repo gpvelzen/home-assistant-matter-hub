@@ -84,8 +84,11 @@ export function ServerModeVacuumDevice(
   // Alexa probes for cluster 0x55 during discovery and may refuse the device without it.
   const hasCleaningModeEntity =
     !!homeAssistantEntity.mapping?.cleaningModeEntity;
+  const hasSuctionLevel = !!homeAssistantEntity.mapping?.suctionLevelEntity;
   if (supportsCleaningModes(attributes) || hasCleaningModeEntity) {
-    device = device.with(createVacuumRvcCleanModeServer(attributes));
+    device = device.with(
+      createVacuumRvcCleanModeServer(attributes, hasSuctionLevel),
+    );
   } else {
     device = device.with(createDefaultRvcCleanModeServer());
   }

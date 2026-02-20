@@ -99,6 +99,14 @@ export interface EntityMappingConfig {
    * Example: "sensor.smart_plug_energy"
    */
   readonly energyEntity?: string;
+  /**
+   * Optional: Entity ID of a select entity that controls the vacuum suction level.
+   * Used for Dreame/Roborock vacuums where suction level is a separate select entity.
+   * When configured, intensity variants (Quiet/Max) are added to each cleaning mode,
+   * enabling Apple Home's "extra features" panel for all cleaning modes.
+   * Example: "select.r2_d2_suction_level"
+   */
+  readonly suctionLevelEntity?: string;
 }
 
 export interface EntityMappingRequest {
@@ -116,6 +124,7 @@ export interface EntityMappingRequest {
   readonly disableLockPin?: boolean;
   readonly powerEntity?: string;
   readonly energyEntity?: string;
+  readonly suctionLevelEntity?: string;
 }
 
 export interface EntityMappingResponse {

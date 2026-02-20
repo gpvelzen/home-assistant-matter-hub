@@ -64,6 +64,7 @@ export function EntityMappingDialog({
   const [disableLockPin, setDisableLockPin] = useState(false);
   const [powerEntity, setPowerEntity] = useState("");
   const [energyEntity, setEnergyEntity] = useState("");
+  const [suctionLevelEntity, setSuctionLevelEntity] = useState("");
   const [availableButtons, setAvailableButtons] = useState<RelatedButton[]>([]);
   const [loadingButtons, setLoadingButtons] = useState(false);
 
@@ -84,6 +85,7 @@ export function EntityMappingDialog({
       setDisableLockPin(currentMapping?.disableLockPin || false);
       setPowerEntity(currentMapping?.powerEntity || "");
       setEnergyEntity(currentMapping?.energyEntity || "");
+      setSuctionLevelEntity(currentMapping?.suctionLevelEntity || "");
       setAvailableButtons([]);
     }
   }, [open, entityId, currentMapping]);
@@ -132,6 +134,7 @@ export function EntityMappingDialog({
       disableLockPin: disableLockPin || undefined,
       powerEntity: powerEntity.trim() || undefined,
       energyEntity: energyEntity.trim() || undefined,
+      suctionLevelEntity: suctionLevelEntity.trim() || undefined,
     });
   }, [
     editEntityId,
@@ -147,6 +150,7 @@ export function EntityMappingDialog({
     disableLockPin,
     powerEntity,
     energyEntity,
+    suctionLevelEntity,
     onSave,
   ]);
 
@@ -260,14 +264,24 @@ export function EntityMappingDialog({
         )}
 
         {showCleaningModeField && (
-          <EntityAutocomplete
-            value={cleaningModeEntity}
-            onChange={setCleaningModeEntity}
-            label="Cleaning Mode Entity (optional)"
-            placeholder="select.vacuum_cleaning_mode"
-            helperText="Select entity that controls the vacuum cleaning mode (e.g., select.r2_d2_cleaning_mode for Dreame vacuums)"
-            domain="select"
-          />
+          <>
+            <EntityAutocomplete
+              value={cleaningModeEntity}
+              onChange={setCleaningModeEntity}
+              label="Cleaning Mode Entity (optional)"
+              placeholder="select.vacuum_cleaning_mode"
+              helperText="Select entity that controls the vacuum cleaning mode (e.g., select.r2_d2_cleaning_mode for Dreame vacuums)"
+              domain="select"
+            />
+            <EntityAutocomplete
+              value={suctionLevelEntity}
+              onChange={setSuctionLevelEntity}
+              label="Suction Level Entity (optional)"
+              placeholder="select.vacuum_suction_level"
+              helperText="Select entity that controls suction level. Adds Quiet/Max intensity options to Apple Home's extra features panel."
+              domain="select"
+            />
+          </>
         )}
 
         {showRoomEntitiesField && (
