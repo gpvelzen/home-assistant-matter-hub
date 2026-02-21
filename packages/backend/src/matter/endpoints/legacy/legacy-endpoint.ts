@@ -2,6 +2,7 @@ import type {
   EntityMappingConfig,
   HomeAssistantEntityState,
   SensorDeviceAttributes,
+  VacuumDeviceAttributes,
 } from "@home-assistant-matter-hub/common";
 import { SensorDeviceClass } from "@home-assistant-matter-hub/common";
 import {
@@ -30,7 +31,7 @@ export class LegacyEndpoint extends EntityEndpoint {
     mapping?: EntityMappingConfig,
   ): Promise<LegacyEndpoint | undefined> {
     const deviceRegistry = registry.deviceOf(entityId);
-    const state = registry.initialState(entityId);
+    let state = registry.initialState(entityId);
     const entity = registry.entity(entityId);
     // Skip entities without state (e.g., being enabled from disabled state)
     if (!state) {
@@ -226,6 +227,28 @@ export class LegacyEndpoint extends EntityEndpoint {
           logger.debug(
             `Auto-assigned mopIntensity ${vacuumEntities.mopIntensityEntity} to ${entityId}`,
           );
+        }
+
+        // Auto-detect rooms via roborock.get_maps when no rooms in attributes
+        const vacAttrs = state.attributes as VacuumDeviceAttributes;
+        if (!vacAttrs.rooms && !vacAttrs.segments && !vacAttrs.room_mapping) {
+          const roborockRooms = await registry.resolveRoborockRooms(entityId);
+          if (roborockRooms.length > 0) {
+            const roomsObj: Record<string, string> = {};
+            for (const r of roborockRooms) {
+              roomsObj[String(r.id)] = r.name;
+            }
+            state = {
+              ...state,
+              attributes: {
+                ...state.attributes,
+                rooms: roomsObj,
+              } as typeof state.attributes,
+            };
+            logger.debug(
+              `Auto-detected ${roborockRooms.length} Roborock rooms for ${entityId}`,
+            );
+          }
         }
       }
     }

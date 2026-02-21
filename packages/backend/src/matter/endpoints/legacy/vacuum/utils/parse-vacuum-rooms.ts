@@ -314,6 +314,27 @@ export function isDreameVacuum(attributes: VacuumDeviceAttributes): boolean {
 }
 
 /**
+ * Detect if the vacuum uses the Roborock integration format.
+ * Rooms resolved via roborock.get_maps have format: { "16": "Kitchen", "17": "Bedroom" }
+ * Keys are numeric segment IDs (as strings), values are room names.
+ * Room cleaning uses vacuum.send_command with app_segment_clean.
+ */
+export function isRoborockVacuum(attributes: VacuumDeviceAttributes): boolean {
+  const roomsData = attributes.rooms;
+  if (!roomsData || typeof roomsData !== "object" || Array.isArray(roomsData)) {
+    return false;
+  }
+
+  const entries = Object.entries(roomsData);
+  if (entries.length === 0) return false;
+
+  // Roborock format: numeric string keys, string values (room names)
+  return entries.every(
+    ([key, value]) => /^\d+$/.test(key) && typeof value === "string",
+  );
+}
+
+/**
  * Detect if the vacuum uses the Ecovacs/Deebot integration format.
  * Ecovacs vacuums store rooms as a flat dict of { room_name: numeric_id }:
  *   { flur: 0, wohnzimmer: 8, esszimmer: 9, kuche: 1, ... }

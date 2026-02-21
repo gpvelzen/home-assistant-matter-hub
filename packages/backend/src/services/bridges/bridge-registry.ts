@@ -4,9 +4,13 @@ import type {
   HomeAssistantEntityState,
   HomeAssistantFilter,
   SensorDeviceAttributes,
+  VacuumRoom,
 } from "@home-assistant-matter-hub/common";
 import { SensorDeviceClass } from "@home-assistant-matter-hub/common";
+import { Logger } from "@matter/general";
+import { callService } from "home-assistant-js-websocket";
 import { keys, pickBy, values } from "lodash-es";
+import type { HomeAssistantClient } from "../home-assistant/home-assistant-client.js";
 import type {
   HomeAssistantDevices,
   HomeAssistantEntities,
@@ -247,6 +251,56 @@ export class BridgeRegistry {
     return { cleaningModeEntity, suctionLevelEntity, mopIntensityEntity };
   }
 
+  private static readonly roborockLogger = Logger.get("RoborockRooms");
+
+  /**
+   * Resolve rooms for a Roborock vacuum by calling roborock.get_maps.
+   * Returns parsed VacuumRoom[] with segment IDs, or empty array if
+   * the service is unavailable or the vacuum is not Roborock.
+   */
+  async resolveRoborockRooms(entityId: string): Promise<VacuumRoom[]> {
+    if (!this.client) return [];
+
+    try {
+      const response = await callService(
+        this.client.connection,
+        "roborock",
+        "get_maps",
+        undefined,
+        { entity_id: entityId },
+        true,
+      );
+
+      // Response format: { "vacuum.roborock_xxx": { maps: [{ rooms: { "16": "Kitchen", ... } }] } }
+      const entityData = (response as Record<string, unknown>)?.[entityId] as
+        | { maps?: Array<{ rooms?: Record<string, string>; name?: string }> }
+        | undefined;
+
+      if (!entityData?.maps) return [];
+
+      const rooms: VacuumRoom[] = [];
+      for (const map of entityData.maps) {
+        if (!map.rooms) continue;
+        for (const [segmentId, roomName] of Object.entries(map.rooms)) {
+          const id = /^\d+$/.test(segmentId)
+            ? Number.parseInt(segmentId, 10)
+            : segmentId;
+          rooms.push({ id, name: roomName });
+        }
+      }
+
+      if (rooms.length > 0) {
+        BridgeRegistry.roborockLogger.info(
+          `${entityId}: Resolved ${rooms.length} rooms via roborock.get_maps`,
+        );
+      }
+      return rooms;
+    } catch {
+      // Service doesn't exist or call failed — not a Roborock vacuum or maps unavailable
+      return [];
+    }
+  }
+
   /**
    * Find a pressure sensor entity that belongs to the same HA device.
    * Returns the entity_id of the pressure sensor, or undefined if none found.
@@ -344,6 +398,7 @@ export class BridgeRegistry {
   constructor(
     private readonly registry: HomeAssistantRegistry,
     private readonly dataProvider: BridgeDataProvider,
+    private readonly client?: HomeAssistantClient,
   ) {
     this.refresh();
   }

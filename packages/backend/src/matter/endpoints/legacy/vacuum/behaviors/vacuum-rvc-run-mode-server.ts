@@ -18,6 +18,7 @@ import {
   getRoomModeValue,
   isDreameVacuum,
   isEcovacsVacuum,
+  isRoborockVacuum,
   isXiaomiMiotVacuum,
   parseVacuumRooms,
 } from "../utils/parse-vacuum-rooms.js";
@@ -155,7 +156,7 @@ const vacuumRvcRunModeConfig = {
           }
 
           // Roborock/Xiaomi Miot vacuums use vacuum.send_command with app_segment_clean
-          if (isXiaomiMiotVacuum(attributes)) {
+          if (isRoborockVacuum(attributes) || isXiaomiMiotVacuum(attributes)) {
             return {
               action: "vacuum.send_command",
               data: {
@@ -264,7 +265,7 @@ const vacuumRvcRunModeConfig = {
       }
 
       // Roborock/Xiaomi Miot vacuums use vacuum.send_command with app_segment_clean
-      if (isXiaomiMiotVacuum(attributes)) {
+      if (isRoborockVacuum(attributes) || isXiaomiMiotVacuum(attributes)) {
         logger.debug(
           `Using vacuum.send_command with app_segment_clean for room ${room.name} (commandId: ${commandId}, id: ${room.id})`,
         );

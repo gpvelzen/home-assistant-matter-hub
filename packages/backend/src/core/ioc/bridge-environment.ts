@@ -39,10 +39,11 @@ export class BridgeEnvironment extends EnvironmentBase {
 
   private async init() {
     const haRegistry = await this.load(HomeAssistantRegistry);
+    const haClient = await this.load(HomeAssistantClient);
 
     this.set(
       BridgeRegistry,
-      new BridgeRegistry(haRegistry, this.get(BridgeDataProvider)),
+      new BridgeRegistry(haRegistry, this.get(BridgeDataProvider), haClient),
     );
     this.set(EntityStateProvider, new EntityStateProvider(haRegistry));
     this.set(
@@ -84,10 +85,11 @@ export class ServerModeEnvironment extends EnvironmentBase {
 
   private async init() {
     const haRegistry = await this.load(HomeAssistantRegistry);
+    const haClient = await this.load(HomeAssistantClient);
 
     this.set(
       BridgeRegistry,
-      new BridgeRegistry(haRegistry, this.get(BridgeDataProvider)),
+      new BridgeRegistry(haRegistry, this.get(BridgeDataProvider), haClient),
     );
     this.set(EntityStateProvider, new EntityStateProvider(haRegistry));
     // Note: No BridgeEndpointManager - server mode uses ServerModeEndpointManager

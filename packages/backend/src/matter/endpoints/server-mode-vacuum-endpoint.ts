@@ -1,6 +1,7 @@
 import type {
   EntityMappingConfig,
   HomeAssistantEntityState,
+  VacuumDeviceAttributes,
 } from "@home-assistant-matter-hub/common";
 import {
   DestroyedDependencyError,
@@ -31,7 +32,7 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
     mapping?: EntityMappingConfig,
   ): Promise<ServerModeVacuumEndpoint | undefined> {
     const deviceRegistry = registry.deviceOf(entityId);
-    const state = registry.initialState(entityId);
+    let state = registry.initialState(entityId);
     const entity = registry.entity(entityId);
 
     if (!state) {
@@ -105,6 +106,28 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
         logger.info(
           `${entityId}: Auto-assigned mopIntensity ${vacuumEntities.mopIntensityEntity}`,
         );
+      }
+
+      // Auto-detect rooms via roborock.get_maps when no rooms in attributes
+      const vacAttrs = state.attributes as VacuumDeviceAttributes;
+      if (!vacAttrs.rooms && !vacAttrs.segments && !vacAttrs.room_mapping) {
+        const roborockRooms = await registry.resolveRoborockRooms(entityId);
+        if (roborockRooms.length > 0) {
+          const roomsObj: Record<string, string> = {};
+          for (const r of roborockRooms) {
+            roomsObj[String(r.id)] = r.name;
+          }
+          state = {
+            ...state,
+            attributes: {
+              ...state.attributes,
+              rooms: roomsObj,
+            } as typeof state.attributes,
+          };
+          logger.info(
+            `${entityId}: Auto-detected ${roborockRooms.length} Roborock rooms`,
+          );
+        }
       }
     } else {
       logger.warn(`${entityId}: No device_id — cannot auto-assign battery`);
