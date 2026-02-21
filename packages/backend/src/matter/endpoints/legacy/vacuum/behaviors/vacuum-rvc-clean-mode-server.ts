@@ -172,7 +172,10 @@ const FAN_TAG_PATTERNS: Array<{ pattern: RegExp; tag: number }> = [
     tag: RvcCleanMode.ModeTag.Quiet,
   },
   {
-    pattern: /^(normal|standard|medium|auto|balanced|default|mittel)$/i,
+    // Only literal "auto" — Apple Home renders the Auto tag as "Automatic"
+    // which is wrong for names like "normal" or "standard".
+    // Those remain untagged so Apple Home uses our label instead.
+    pattern: /^(auto)$/i,
     tag: RvcCleanMode.ModeTag.Auto,
   },
   {
