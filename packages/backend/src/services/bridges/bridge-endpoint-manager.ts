@@ -23,6 +23,7 @@ export class BridgeEndpointManager extends Service {
   private entityIds: string[] = [];
   private unsubscribe?: () => void;
   private _failedEntities: FailedEntity[] = [];
+  private readonly mappingFingerprints = new Map<string, string>();
 
   get failedEntities(): FailedEntity[] {
     // Combine static failed entities with dynamically isolated entities
@@ -71,6 +72,13 @@ export class BridgeEndpointManager extends Service {
 
   private getEntityMapping(entityId: string): EntityMappingConfig | undefined {
     return this.mappingStorage.getMapping(this.bridgeId, entityId);
+  }
+
+  private computeMappingFingerprint(
+    mapping: EntityMappingConfig | undefined,
+  ): string {
+    if (!mapping) return "";
+    return JSON.stringify(mapping);
   }
 
   override async dispose(): Promise<void> {
@@ -123,8 +131,29 @@ export class BridgeEndpointManager extends Service {
         } catch (e) {
           this.log.warn(`Failed to delete endpoint ${endpoint.entityId}:`, e);
         }
+        this.mappingFingerprints.delete(endpoint.entityId);
       } else {
-        existingEndpoints.push(endpoint);
+        // Check if the mapping changed since the endpoint was created.
+        // If so, delete the old endpoint so it gets recreated with the new config.
+        const currentMapping = this.getEntityMapping(endpoint.entityId);
+        const currentFp = this.computeMappingFingerprint(currentMapping);
+        const storedFp = this.mappingFingerprints.get(endpoint.entityId) ?? "";
+        if (currentFp !== storedFp) {
+          this.log.info(
+            `Mapping changed for ${endpoint.entityId}, recreating endpoint`,
+          );
+          try {
+            await endpoint.delete();
+          } catch (e) {
+            this.log.warn(
+              `Failed to delete endpoint ${endpoint.entityId} for mapping change:`,
+              e,
+            );
+          }
+          this.mappingFingerprints.delete(endpoint.entityId);
+        } else {
+          existingEndpoints.push(endpoint);
+        }
       }
     }
 
@@ -187,6 +216,10 @@ export class BridgeEndpointManager extends Service {
         if (endpoint) {
           try {
             await this.root.add(endpoint);
+            this.mappingFingerprints.set(
+              entityId,
+              this.computeMappingFingerprint(mapping),
+            );
           } catch (e) {
             const errorMessage = e instanceof Error ? e.message : String(e);
             // Handle all endpoint initialization errors gracefully

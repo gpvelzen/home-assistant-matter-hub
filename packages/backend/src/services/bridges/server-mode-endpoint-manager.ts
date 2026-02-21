@@ -27,6 +27,7 @@ export class ServerModeEndpointManager extends Service {
   private unsubscribe?: () => void;
   private _failedEntities: FailedEntity[] = [];
   private deviceEndpoint?: EntityEndpoint;
+  private mappingFingerprint = "";
 
   get failedEntities(): FailedEntity[] {
     return this._failedEntities;
@@ -52,6 +53,13 @@ export class ServerModeEndpointManager extends Service {
 
   private getEntityMapping(entityId: string): EntityMappingConfig | undefined {
     return this.mappingStorage.getMapping(this.bridgeId, entityId);
+  }
+
+  private computeMappingFingerprint(
+    mapping: EntityMappingConfig | undefined,
+  ): string {
+    if (!mapping) return "";
+    return JSON.stringify(mapping);
   }
 
   override async dispose(): Promise<void> {
@@ -126,10 +134,24 @@ export class ServerModeEndpointManager extends Service {
       return;
     }
 
-    // If we already have a device endpoint, update its state instead of recreating
+    // Recreate endpoint if the mapping changed (e.g. device type override)
+    const currentFp = this.computeMappingFingerprint(mapping);
     if (this.deviceEndpoint) {
-      this.log.debug(`Device endpoint already exists for ${entityId}`);
-      return;
+      if (currentFp === this.mappingFingerprint) {
+        this.log.debug(`Device endpoint already exists for ${entityId}`);
+        return;
+      }
+      this.log.info(`Mapping changed for ${entityId}, recreating endpoint`);
+      try {
+        await this.deviceEndpoint.delete();
+      } catch (e) {
+        this.log.warn(
+          `Failed to delete endpoint ${entityId} for mapping change:`,
+          e,
+        );
+      }
+      this.deviceEndpoint = undefined;
+      this.mappingFingerprint = "";
     }
 
     if (isHeapUnderPressure()) {
@@ -164,6 +186,7 @@ export class ServerModeEndpointManager extends Service {
         }
         await this.serverNode.addDevice(endpoint);
         this.deviceEndpoint = endpoint;
+        this.mappingFingerprint = currentFp;
         this.log.info(
           `Server mode: Added vacuum ${entityId} as standalone device`,
         );
@@ -189,6 +212,7 @@ export class ServerModeEndpointManager extends Service {
       // Add directly to the server node (not to an aggregator)
       await this.serverNode.addDevice(endpoint);
       this.deviceEndpoint = endpoint;
+      this.mappingFingerprint = currentFp;
       this.log.info(`Server mode: Added device ${entityId}`);
     } catch (e) {
       const reason = e instanceof Error ? e.message : String(e);
