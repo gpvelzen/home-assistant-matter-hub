@@ -262,7 +262,7 @@ export class BridgeRegistry {
     if (!this.client) return [];
 
     try {
-      const response = await callService(
+      const raw = await callService(
         this.client.connection,
         "roborock",
         "get_maps",
@@ -271,12 +271,21 @@ export class BridgeRegistry {
         true,
       );
 
-      // Response format: { "vacuum.roborock_xxx": { maps: [{ rooms: { "16": "Kitchen", ... } }] } }
-      const entityData = (response as Record<string, unknown>)?.[entityId] as
+      // callService with returnResponse=true returns { context, response: { ... } }
+      const wrapper = raw as Record<string, unknown> | undefined;
+      const responseData =
+        (wrapper?.response as Record<string, unknown>) ?? wrapper;
+
+      const entityData = responseData?.[entityId] as
         | { maps?: Array<{ rooms?: Record<string, string>; name?: string }> }
         | undefined;
 
-      if (!entityData?.maps) return [];
+      if (!entityData?.maps) {
+        BridgeRegistry.roborockLogger.debug(
+          `${entityId}: roborock.get_maps returned no maps (keys: ${Object.keys(responseData ?? {}).join(", ")})`,
+        );
+        return [];
+      }
 
       const rooms: VacuumRoom[] = [];
       for (const map of entityData.maps) {
@@ -295,8 +304,16 @@ export class BridgeRegistry {
         );
       }
       return rooms;
-    } catch {
-      // Service doesn't exist or call failed — not a Roborock vacuum or maps unavailable
+    } catch (error) {
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null
+            ? JSON.stringify(error)
+            : String(error);
+      BridgeRegistry.roborockLogger.warn(
+        `${entityId}: roborock.get_maps failed: ${msg}`,
+      );
       return [];
     }
   }

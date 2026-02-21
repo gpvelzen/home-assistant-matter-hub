@@ -225,7 +225,9 @@ const MOP_TAG_PATTERNS: Array<{ pattern: RegExp; tag: number }> = [
     tag: RvcCleanMode.ModeTag.Quiet,
   },
   {
-    pattern: /^(medium|normal|standard|moderate|wet|mittel)$/i,
+    // Only literal "auto" — Apple Home renders the Auto tag as "Automatic"
+    // which is wrong for names like "moderate" or "standard".
+    pattern: /^(auto)$/i,
     tag: RvcCleanMode.ModeTag.Auto,
   },
   {
