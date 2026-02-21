@@ -72,6 +72,12 @@ export class HomeAssistantActions extends Service {
         );
       },
     );
+    this.fireEvent("hamh_action", {
+      entity_id,
+      action,
+      data,
+      source: "matter_controller",
+    });
   }
 
   call(action: HomeAssistantAction, entityId: string) {
@@ -182,6 +188,20 @@ export class HomeAssistantActions extends Service {
       circuitBreakerOpen: this.circuitBreaker.isOpen,
       lastSuccessMs: Date.now() - this.lastSuccessTime,
     };
+  }
+
+  fireEvent(eventType: string, eventData?: Record<string, unknown>): void {
+    const connection = this.client.connection;
+    connection
+      .sendMessagePromise({
+        type: "fire_event",
+        event_type: eventType,
+        event_data: eventData,
+      })
+      .catch((error) => {
+        const errorMsg = this.formatError(error);
+        this.log.warn(`Failed to fire event '${eventType}': ${errorMsg}`);
+      });
   }
 
   override async dispose(): Promise<void> {
