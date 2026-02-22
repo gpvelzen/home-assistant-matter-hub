@@ -17,6 +17,20 @@ import RunningMode = Thermostat.ThermostatRunningMode;
 import type { ActionContext } from "@matter/main";
 import { transactionIsOffline } from "../../utils/transaction-is-offline.js";
 
+// Tracks entity IDs currently receiving a nudge write from update().
+// Prevents the nudge itself from triggering auto-resume in $Changing handlers.
+const nudgingSetpoints = new Set<string>();
+
+/**
+ * Nudge a setpoint by +1 centidegree (0.01°C) so that any controller write
+ * of the "real" value produces a value change and triggers $Changing.
+ * If already at the max limit, nudge -1 instead to stay within bounds.
+ */
+function nudgeSetpoint(value: number | undefined, maxLimit: number): number {
+  if (value == null) return 2000; // fallback 20°C
+  return value >= maxLimit ? value - 1 : value + 1;
+}
+
 // For dual-mode thermostats (heating + cooling), AutoMode is ENABLED so Apple Home
 // can offer Auto mode and dual setpoints. Without AutoMode, Apple Home loses Auto.
 //
@@ -265,6 +279,7 @@ export class ThermostatServerBase extends FullFeaturedBase {
       return;
     }
     const homeAssistant = this.agent.get(HomeAssistantEntityBehavior);
+    const entityId = homeAssistant.entityId;
     const config = this.state.config;
 
     // When unavailable, keep last known values but report offline via BasicInformation.reachable
@@ -394,17 +409,41 @@ export class ThermostatServerBase extends FullFeaturedBase {
       systemMode === Thermostat.SystemMode.Auto
         ? { thermostatRunningMode: runningMode }
         : {}),
-      // Skip setpoint updates while Off (#176). This prevents HA state updates
-      // from writing setpoints while Off, which would trigger $Changing events
-      // and cause unwanted auto-resume. Only controller writes should trigger it.
-      // The correct setpoint is restored when the device turns on.
-      ...(this.features.heating && systemMode !== Thermostat.SystemMode.Off
-        ? { occupiedHeatingSetpoint: clampedHeatingSetpoint }
-        : {}),
-      ...(this.features.cooling && systemMode !== Thermostat.SystemMode.Off
-        ? { occupiedCoolingSetpoint: clampedCoolingSetpoint }
-        : {}),
     });
+
+    // Setpoints are applied in a separate patch wrapped with the nudgingSetpoints
+    // guard. When Off, setpoints are nudged by +1 centidegree (0.01°C) so any
+    // controller write — even the "same" temperature — triggers $Changing for
+    // auto-resume (#176). The guard prevents the nudge itself from auto-resuming.
+    nudgingSetpoints.add(entityId);
+    try {
+      applyPatchState(this.state, {
+        ...(this.features.heating
+          ? {
+              occupiedHeatingSetpoint:
+                systemMode === Thermostat.SystemMode.Off
+                  ? nudgeSetpoint(
+                      clampedHeatingSetpoint,
+                      maxHeatLimit ?? WIDE_MAX,
+                    )
+                  : clampedHeatingSetpoint,
+            }
+          : {}),
+        ...(this.features.cooling
+          ? {
+              occupiedCoolingSetpoint:
+                systemMode === Thermostat.SystemMode.Off
+                  ? nudgeSetpoint(
+                      clampedCoolingSetpoint,
+                      maxCoolLimit ?? WIDE_MAX,
+                    )
+                  : clampedCoolingSetpoint,
+            }
+          : {}),
+      });
+    } finally {
+      nudgingSetpoints.delete(entityId);
+    }
   }
 
   override setpointRaiseLower(request: Thermostat.SetpointRaiseLowerRequest) {
@@ -484,7 +523,14 @@ export class ThermostatServerBase extends FullFeaturedBase {
 
         if (isOff && this.features.heating) {
           // Auto-resume (#176): controller wrote a heating setpoint while Off.
-          // Switch to Heat mode so the thermostat turns on.
+          // The nudge in update() ensures $Changing fires even for same-value writes.
+          // Skip if this $Changing was caused by the nudge itself (not a controller write).
+          if (nudgingSetpoints.has(homeAssistant.entityId)) {
+            logger.debug(
+              `heatingSetpointChanging: skipping auto-resume - nudge write in progress`,
+            );
+            return;
+          }
           logger.info(
             `heatingSetpointChanging: auto-resume - switching to Heat (was Off)`,
           );
@@ -562,7 +608,14 @@ export class ThermostatServerBase extends FullFeaturedBase {
 
         if (isOff && !this.features.heating && this.features.cooling) {
           // Auto-resume (#176): controller wrote a cooling setpoint while Off.
-          // Switch to Cool mode so the thermostat turns on (cooling-only device).
+          // The nudge in update() ensures $Changing fires even for same-value writes.
+          // Skip if this $Changing was caused by the nudge itself (not a controller write).
+          if (nudgingSetpoints.has(homeAssistant.entityId)) {
+            logger.debug(
+              `coolingSetpointChanging: skipping auto-resume - nudge write in progress`,
+            );
+            return;
+          }
           logger.info(
             `coolingSetpointChanging: auto-resume - switching to Cool (was Off)`,
           );
