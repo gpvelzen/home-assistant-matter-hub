@@ -37,10 +37,11 @@ describe("adjustPositionForReading", () => {
     expect(adjustPositionForReading(0, undefined, true)).toBe(0);
   });
 
-  it("coverSwapOpenClose forces inversion (same as default)", () => {
+  it("coverSwapOpenClose skips inversion (position passes through)", () => {
     const flags: BridgeFeatureFlags = { coverSwapOpenClose: true };
-    expect(adjustPositionForReading(80, flags, false)).toBe(20);
-    expect(adjustPositionForReading(0, flags, false)).toBe(100);
+    expect(adjustPositionForReading(80, flags, false)).toBe(80);
+    expect(adjustPositionForReading(0, flags, false)).toBe(0);
+    expect(adjustPositionForReading(100, flags, false)).toBe(100);
   });
 
   it("coverUseHomeAssistantPercentage takes precedence over coverSwapOpenClose (#148)", () => {
@@ -82,9 +83,12 @@ describe("adjustPositionForWriting", () => {
     expect(adjustPositionForWriting(0, flags, false)).toBe(0);
   });
 
-  it("coverSwapOpenClose forces inversion", () => {
+  it("coverSwapOpenClose skips inversion (position passes through)", () => {
     const flags: BridgeFeatureFlags = { coverSwapOpenClose: true };
-    expect(adjustPositionForWriting(20, flags, false)).toBe(80);
+    expect(adjustPositionForWriting(20, flags, false)).toBe(20);
+    expect(adjustPositionForWriting(80, flags, false)).toBe(80);
+    expect(adjustPositionForWriting(0, flags, false)).toBe(0);
+    expect(adjustPositionForWriting(100, flags, false)).toBe(100);
   });
 
   it("coverUseHomeAssistantPercentage takes precedence over coverSwapOpenClose (#148)", () => {

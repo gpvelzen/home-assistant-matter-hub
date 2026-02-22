@@ -24,7 +24,7 @@ export function adjustPositionForReading(
     matterSemantics;
 
   if (flags?.coverSwapOpenClose === true && !skipInversion) {
-    return 100 - position;
+    return position;
   }
 
   if (!skipInversion) {
@@ -58,7 +58,7 @@ export function adjustPositionForWriting(
     matterSemantics;
 
   if (flags?.coverSwapOpenClose === true && !skipInversion) {
-    return 100 - position;
+    return position;
   }
 
   if (!skipInversion) {
