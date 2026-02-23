@@ -133,7 +133,7 @@ export function RvcCleanModeServer(
   const defaultModes: RvcCleanMode.ModeOption[] = [
     {
       label: "Vacuum",
-      mode: 0,
+      mode: 1,
       modeTags: [{ value: RvcCleanMode.ModeTag.Vacuum }],
     },
   ];
@@ -141,6 +141,6 @@ export function RvcCleanModeServer(
   return RvcCleanModeServerBase.set({
     config,
     supportedModes: initialState?.supportedModes ?? defaultModes,
-    currentMode: initialState?.currentMode ?? 0,
+    currentMode: initialState?.currentMode ?? 1,
   });
 }

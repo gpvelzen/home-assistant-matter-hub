@@ -25,10 +25,10 @@ const logger = Logger.get("VacuumRvcCleanModeServer");
 //     appear in the "extra features" panel.
 // ---------------------------------------------------------------------------
 
-const MODE_VACUUM = 0;
-const MODE_VACUUM_AND_MOP = 1;
-const MODE_MOP = 2;
-const MODE_VACUUM_THEN_MOP = 6;
+const MODE_VACUUM = 1;
+const MODE_VACUUM_AND_MOP = 2;
+const MODE_MOP = 3;
+const MODE_VACUUM_THEN_MOP = 7;
 
 /** Base mode value for dynamically generated fan speed modes */
 const FAN_SPEED_MODE_BASE = 10;
@@ -812,11 +812,11 @@ export function createDefaultRvcCleanModeServer(): ReturnType<
   typeof RvcCleanModeServer
 > {
   const defaultConfig = {
-    getCurrentMode: () => 0,
+    getCurrentMode: () => MODE_VACUUM,
     getSupportedModes: (): RvcCleanMode.ModeOption[] => [
       {
         label: "Vacuum",
-        mode: 0,
+        mode: MODE_VACUUM,
         modeTags: [{ value: RvcCleanMode.ModeTag.Vacuum }],
       },
     ],

@@ -4,6 +4,7 @@ import { RoboticVacuumCleanerDevice } from "@matter/main/devices";
 import { HomeAssistantEntityBehavior } from "../../../behaviors/home-assistant-entity-behavior.js";
 import { IdentifyServer } from "../../../behaviors/identify-server.js";
 import { VacuumOnOffServer } from "./behaviors/vacuum-on-off-server.js";
+import { VacuumPowerSourceServer } from "./behaviors/vacuum-power-source-server.js";
 import {
   createDefaultRvcCleanModeServer,
   createVacuumRvcCleanModeServer,
@@ -31,10 +32,7 @@ import { parseVacuumRooms } from "./utils/parse-vacuum-rooms.js";
  * Only clusters from the Matter RoboticVacuumCleaner device type (0x74) are included:
  * Required: Identify, RvcRunMode, RvcOperationalState
  * Optional: RvcCleanMode, ServiceArea
- *
- * PowerSource is intentionally NOT included on this endpoint because it is
- * not part of the RVC device type spec. Non-spec clusters on the device
- * endpoint can cause controllers like Alexa to silently reject the device.
+ * Additional: PowerSource (for battery info)
  *
  * The BasicInformation comes from the ServerNode itself, not the endpoint.
  */
@@ -74,6 +72,9 @@ export function ServerModeVacuumDevice(
   if (includeOnOff) {
     device = device.with(VacuumOnOffServer);
   }
+
+  // PowerSource — always included.
+  device = device.with(VacuumPowerSourceServer);
 
   // ServiceArea — always included.
   const roomEntities = homeAssistantEntity.mapping?.roomEntities;
