@@ -211,6 +211,7 @@ jobs:
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('repack/package/package.json','utf8'));
             pkg.name = '@riddix/hamh';
+            pkg.repository = 'github:RiDDiX/home-assistant-matter-hub';
             fs.writeFileSync('repack/package/package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
           cd repack && tar czf ../package-npm.tgz package && cd ..
