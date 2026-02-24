@@ -163,23 +163,23 @@ const vacuumRvcRunModeConfig = {
           // Clear selected areas after use
           serviceArea.state.selectedAreas = [];
 
-          // Valetudo vacuums use segment_cleanup via vacuum.send_command.
-          // Check entity ID first — Valetudo replaces stock firmware so
-          // attribute-based detection (isDreame/isRoborock) won't work.
+          // Valetudo vacuums use mqtt.publish to trigger segment cleanup.
+          // vacuum.send_command is NOT supported by Valetudo's MQTT integration.
           const vacuumEntityId = homeAssistant.entityId;
           if (vacuumEntityId.startsWith("vacuum.valetudo_")) {
+            const identifier = vacuumEntityId.replace(/^vacuum\.valetudo_/, "");
             logger.info(
-              `Valetudo vacuum: Using segment_cleanup for rooms: ${roomIds.join(", ")}`,
+              `Valetudo vacuum: Using mqtt.publish segment_cleanup for rooms: ${roomIds.join(", ")}`,
             );
             return {
-              action: "vacuum.send_command",
+              action: "mqtt.publish",
               data: {
-                command: "segment_cleanup",
-                params: {
-                  segment_ids: roomIds,
+                topic: `valetudo/${identifier}/MapSegmentationCapability/clean/set`,
+                payload: JSON.stringify({
+                  segment_ids: roomIds.map(String),
                   iterations: 1,
                   customOrder: true,
-                },
+                }),
               },
             };
           }
@@ -290,21 +290,23 @@ const vacuumRvcRunModeConfig = {
       // Use originalId for commands (Dreame multi-floor: id is deduplicated, originalId is per-floor)
       const commandId = room.originalId ?? room.id;
 
-      // Valetudo vacuums use segment_cleanup via vacuum.send_command
+      // Valetudo vacuums use mqtt.publish to trigger segment cleanup.
+      // vacuum.send_command is NOT supported by Valetudo's MQTT integration.
       const vacuumEntityId = entity.entity_id;
       if (vacuumEntityId.startsWith("vacuum.valetudo_")) {
+        const identifier = vacuumEntityId.replace(/^vacuum\.valetudo_/, "");
         logger.info(
-          `Valetudo vacuum: Using segment_cleanup for room ${room.name} (id: ${commandId})`,
+          `Valetudo vacuum: Using mqtt.publish segment_cleanup for room ${room.name} (id: ${commandId})`,
         );
         return {
-          action: "vacuum.send_command",
+          action: "mqtt.publish",
           data: {
-            command: "segment_cleanup",
-            params: {
-              segment_ids: [commandId],
+            topic: `valetudo/${identifier}/MapSegmentationCapability/clean/set`,
+            payload: JSON.stringify({
+              segment_ids: [String(commandId)],
               iterations: 1,
               customOrder: true,
-            },
+            }),
           },
         };
       }
