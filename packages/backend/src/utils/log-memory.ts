@@ -13,7 +13,7 @@ export function logMemoryUsage(log: Logger, context: string): void {
   const heapUsedMB = Math.round(mem.heapUsed / 1024 / 1024);
   const heapTotalMB = Math.round(mem.heapTotal / 1024 / 1024);
   const rssMB = Math.round(mem.rss / 1024 / 1024);
-  log.info(
+  log.debug(
     `Memory [${context}]: heap ${heapUsedMB}/${heapTotalMB} MB, rss ${rssMB} MB`,
   );
 }
