@@ -21,6 +21,7 @@ import { VacuumRvcOperationalStateServer } from "./behaviors/vacuum-rvc-operatio
 import { createVacuumRvcRunModeServer } from "./behaviors/vacuum-rvc-run-mode-server.js";
 import {
   createCustomServiceAreaServer,
+  createDefaultServiceAreaServer,
   createVacuumServiceAreaServer,
 } from "./behaviors/vacuum-service-area-server.js";
 import { parseVacuumRooms } from "./utils/parse-vacuum-rooms.js";
@@ -66,9 +67,8 @@ export function VacuumDevice(
   // Controllers (Alexa, Apple Home) expect battery info on vacuum endpoints.
   device = device.with(VacuumPowerSourceServer);
 
-  // ServiceArea — only included when rooms or custom areas are configured.
-  // Omitted for vacuums without room data to avoid exposing an unnecessary
-  // cluster that some controllers (Alexa) may not handle gracefully.
+  // ServiceArea — always included.
+  // Controllers expect this cluster on vacuum endpoints.
   const customAreas = homeAssistantEntity.mapping?.customServiceAreas;
   const roomEntities = homeAssistantEntity.mapping?.roomEntities;
   const rooms = parseVacuumRooms(attributes);
@@ -86,7 +86,8 @@ export function VacuumDevice(
       createVacuumServiceAreaServer(attributes, roomEntities),
     );
   } else {
-    logger.info(`${entityId}: Skipping ServiceArea (no rooms configured)`);
+    logger.info(`${entityId}: Adding ServiceArea (default single-area)`);
+    device = device.with(createDefaultServiceAreaServer());
   }
 
   // RvcCleanMode — always included.

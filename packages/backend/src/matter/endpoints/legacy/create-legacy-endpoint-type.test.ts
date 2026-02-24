@@ -46,7 +46,6 @@ const testEntities: Record<
       battery_level: 75,
       fan_speed: "medium",
       fan_speed_list: ["off", "low", "medium", "high"],
-      rooms: { "1": "Living Room", "2": "Kitchen" },
     }),
   ],
   [HomeAssistantDomain.climate]: [
