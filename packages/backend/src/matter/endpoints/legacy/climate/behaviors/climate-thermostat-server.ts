@@ -124,12 +124,9 @@ const config: ThermostatServerConfig = {
       const modes = attributes(entity).hvac_modes ?? [];
 
       // heat_cool-only zones (e.g. HVAC zones that follow the main system):
-      // Can't independently switch — use hvac_action to determine Heat or Cool.
+      // Exposed as Heating-only devices (#207). Always return Heat — the zone
+      // can't independently switch, and Cool is invalid for a Heating-only device.
       if (isHeatCoolOnly(modes)) {
-        const action = attributes(entity).hvac_action;
-        if (action === ClimateHvacAction.cooling) {
-          return Thermostat.SystemMode.Cool;
-        }
         return Thermostat.SystemMode.Heat;
       }
 
@@ -164,20 +161,24 @@ const config: ThermostatServerConfig = {
     if (!action) {
       return Thermostat.ThermostatRunningMode.Off;
     }
-    return (
-      hvacActionToRunningMode[action] ?? Thermostat.ThermostatRunningMode.Off
-    );
+    const runningMode =
+      hvacActionToRunningMode[action] ?? Thermostat.ThermostatRunningMode.Off;
+    // heat_cool-only zones are exposed as Heating-only (#207).
+    // Remap Cool→Heat so thermostatRunningState doesn't set cool=true.
+    if (
+      runningMode === Thermostat.ThermostatRunningMode.Cool &&
+      isHeatCoolOnly(attributes(entity).hvac_modes ?? [])
+    ) {
+      return Thermostat.ThermostatRunningMode.Heat;
+    }
+    return runningMode;
   },
   getControlSequence: (entity) => {
     const modes = attributes(entity).hvac_modes ?? [];
 
-    // heat_cool-only zones: report CoolingOnly or HeatingOnly based on
-    // current capability, per Matter spec ControlSequenceOfOperationEnum note.
+    // heat_cool-only zones: exposed as Heating-only devices (#207).
+    // Always report HeatingOnly — CoolingOnly is invalid for the feature set.
     if (isHeatCoolOnly(modes)) {
-      const action = attributes(entity).hvac_action;
-      if (action === ClimateHvacAction.cooling) {
-        return Thermostat.ControlSequenceOfOperation.CoolingOnly;
-      }
       return Thermostat.ControlSequenceOfOperation.HeatingOnly;
     }
 

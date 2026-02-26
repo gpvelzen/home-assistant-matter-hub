@@ -152,9 +152,18 @@ export function ClimateDevice(
   const hasBatteryEntity = !!homeAssistantEntity.mapping?.batteryEntity;
   const hasBattery = hasBatteryAttr || hasBatteryEntity;
 
-  const supportsCooling = coolingModes.some((mode) =>
-    attributes.hvac_modes.includes(mode),
-  );
+  // heat_cool-only zones (e.g. HVAC zones that follow the main system) can't
+  // independently switch between heating and cooling. Expose as heating-only
+  // so Apple Home shows only Heat+Off modes instead of both Heat and Cool (#207).
+  // "Heat" effectively means "zone active (following system)".
+  const heatCoolOnly =
+    attributes.hvac_modes.includes(ClimateHvacMode.heat_cool) &&
+    !attributes.hvac_modes.includes(ClimateHvacMode.heat) &&
+    !attributes.hvac_modes.includes(ClimateHvacMode.cool);
+
+  const supportsCooling = heatCoolOnly
+    ? false
+    : coolingModes.some((mode) => attributes.hvac_modes.includes(mode));
   const hasExplicitHeating = heatingModes.some((mode) =>
     attributes.hvac_modes.includes(mode),
   );
