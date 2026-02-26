@@ -1,6 +1,7 @@
 import { exec } from "node:child_process";
 import os from "node:os";
 import { promisify } from "node:util";
+import v8 from "node:v8";
 import express from "express";
 
 const execAsync = promisify(exec);
@@ -42,9 +43,11 @@ export interface SystemInfo {
   process: {
     pid: number;
     uptime: number;
+    rss: number;
     memoryUsage: number;
     heapTotal: number;
     heapUsed: number;
+    heapSizeLimit: number;
     external: number;
   };
 }
@@ -113,9 +116,11 @@ export function systemApi(version: string): express.Router {
         process: {
           pid: process.pid,
           uptime: process.uptime(),
+          rss: memUsage.rss,
           memoryUsage: memUsage.heapUsed,
           heapTotal: memUsage.heapTotal,
           heapUsed: memUsage.heapUsed,
+          heapSizeLimit: v8.getHeapStatistics().heap_size_limit,
           external: memUsage.external,
         },
       };

@@ -48,9 +48,11 @@ interface SystemInfo {
   process: {
     pid: number;
     uptime: number;
+    rss: number;
     memoryUsage: number;
     heapTotal: number;
     heapUsed: number;
+    heapSizeLimit: number;
     external: number;
   };
 }
@@ -308,6 +310,60 @@ export const SystemInfo = () => {
                           memoryUsagePercent > 80
                             ? "error.main"
                             : memoryUsagePercent > 60
+                              ? "warning.main"
+                              : "success.main",
+                        transition: "width 0.3s ease",
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                >
+                  <MemoryIcon />
+                  HAMH Process Memory
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 0.5,
+                    }}
+                  >
+                    <Typography variant="body2">
+                      RSS: {formatBytes(systemInfo.process.rss)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Heap: {formatBytes(systemInfo.process.heapUsed)} /{" "}
+                      {formatBytes(systemInfo.process.heapSizeLimit)}
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      height: 8,
+                      backgroundColor: "action.hover",
+                      borderRadius: 4,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        height: "100%",
+                        width: `${Math.min((systemInfo.process.heapUsed / systemInfo.process.heapSizeLimit) * 100, 100)}%`,
+                        backgroundColor:
+                          systemInfo.process.heapUsed /
+                            systemInfo.process.heapSizeLimit >
+                          0.85
+                            ? "error.main"
+                            : systemInfo.process.heapUsed /
+                                  systemInfo.process.heapSizeLimit >
+                                0.6
                               ? "warning.main"
                               : "success.main",
                         transition: "width 0.3s ease",
