@@ -46,6 +46,8 @@ export class BridgeRegistry {
   private _usedPowerEntities: Set<string> = new Set();
   // Track energy entities that have been auto-assigned to switch/plug entities
   private _usedEnergyEntities: Set<string> = new Set();
+  // Track entities consumed by composed devices (e.g., sensors/climate grouped under air purifier)
+  private _usedComposedSubEntities: Set<string> = new Set();
 
   deviceOf(entityId: string): HomeAssistantDeviceRegistry {
     const entity = this._entities[entityId];
@@ -168,6 +170,57 @@ export class BridgeRegistry {
       }
     }
     return undefined;
+  }
+
+  /**
+   * Find a temperature sensor entity that belongs to the same HA device.
+   * Returns the entity_id of the temperature sensor, or undefined if none found.
+   */
+  findTemperatureEntityForDevice(deviceId: string): string | undefined {
+    const entities = values(this.registry.entities);
+    for (const entity of entities) {
+      if (entity.device_id !== deviceId) continue;
+      if (!entity.entity_id.startsWith("sensor.")) continue;
+
+      const state = this.registry.states[entity.entity_id];
+      if (!state) continue;
+
+      const attrs = state.attributes as SensorDeviceAttributes;
+      if (attrs.device_class === SensorDeviceClass.temperature) {
+        return entity.entity_id;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Find a climate entity that belongs to the same HA device.
+   * Returns the entity_id of the climate entity, or undefined if none found.
+   */
+  findClimateEntityForDevice(deviceId: string): string | undefined {
+    const entities = values(this.registry.entities);
+    for (const entity of entities) {
+      if (entity.device_id !== deviceId) continue;
+      if (!entity.entity_id.startsWith("climate.")) continue;
+
+      const state = this.registry.states[entity.entity_id];
+      if (state) return entity.entity_id;
+    }
+    return undefined;
+  }
+
+  /**
+   * Mark an entity as consumed by a composed device.
+   */
+  markComposedSubEntityUsed(entityId: string): void {
+    this._usedComposedSubEntities.add(entityId);
+  }
+
+  /**
+   * Check if an entity has been consumed by a composed device.
+   */
+  isComposedSubEntityUsed(entityId: string): boolean {
+    return this._usedComposedSubEntities.has(entityId);
   }
 
   /**
@@ -543,6 +596,7 @@ export class BridgeRegistry {
     this._usedPressureEntities.clear();
     this._usedPowerEntities.clear();
     this._usedEnergyEntities.clear();
+    this._usedComposedSubEntities.clear();
     // Clear battery lookup cache
     this._batteryEntityCache.clear();
 

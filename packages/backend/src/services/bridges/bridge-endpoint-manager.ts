@@ -123,6 +123,27 @@ export class BridgeEndpointManager extends Service {
     const endpoints = this.root.parts.map((p) => p as EntityEndpoint);
     this.entityIds = this.registry.entityIds;
 
+    // Pre-calculate composed air purifier sub-entities so they get skipped
+    // during individual endpoint creation (requires mapping access).
+    if (this.registry.isAutoComposedDevicesEnabled()) {
+      for (const eid of this.entityIds) {
+        if (!eid.startsWith("fan.")) continue;
+        const m = this.getEntityMapping(eid);
+        const matterType = m?.matterDeviceType ?? "fan";
+        if (matterType !== "air_purifier") continue;
+        const ent = this.registry.entity(eid);
+        if (!ent?.device_id) continue;
+        const tempId = this.registry.findTemperatureEntityForDevice(
+          ent.device_id,
+        );
+        const humId = this.registry.findHumidityEntityForDevice(ent.device_id);
+        const climId = this.registry.findClimateEntityForDevice(ent.device_id);
+        if (tempId) this.registry.markComposedSubEntityUsed(tempId);
+        if (humId) this.registry.markComposedSubEntityUsed(humId);
+        if (climId) this.registry.markComposedSubEntityUsed(climId);
+      }
+    }
+
     const existingEndpoints: EntityEndpoint[] = [];
     for (const endpoint of endpoints) {
       if (!this.entityIds.includes(endpoint.entityId)) {

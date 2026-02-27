@@ -16,6 +16,7 @@ import type { BridgeRegistry } from "../../../services/bridges/bridge-registry.j
 import type { HomeAssistantStates } from "../../../services/home-assistant/home-assistant-registry.js";
 import { HomeAssistantEntityBehavior } from "../../behaviors/home-assistant-entity-behavior.js";
 import { EntityEndpoint } from "../../endpoints/entity-endpoint.js";
+import { ComposedAirPurifierEndpoint } from "../composed/composed-air-purifier-endpoint.js";
 import { ComposedSensorEndpoint } from "../composed/composed-sensor-endpoint.js";
 import { createLegacyEndpointType } from "./create-legacy-endpoint-type.js";
 import { supportsCleaningModes } from "./vacuum/behaviors/vacuum-rvc-clean-mode-server.js";
@@ -64,6 +65,15 @@ export class LegacyEndpoint extends EntityEndpoint {
     ) {
       logger.debug(
         `Skipping ${entityId} - already auto-assigned as pressure to a temperature sensor`,
+      );
+      return;
+    }
+    if (
+      registry.isAutoComposedDevicesEnabled() &&
+      registry.isComposedSubEntityUsed(entityId)
+    ) {
+      logger.debug(
+        `Skipping ${entityId} - already consumed by a composed device`,
       );
       return;
     }
@@ -288,7 +298,7 @@ export class LegacyEndpoint extends EntityEndpoint {
         attrs.device_class === SensorDeviceClass.temperature &&
         (effectiveMapping?.humidityEntity || effectiveMapping?.pressureEntity)
       ) {
-        const areaName = registry.getAreaName(entityId);
+        const composedAreaName = registry.getAreaName(entityId);
         const composed = await ComposedSensorEndpoint.create({
           registry,
           primaryEntityId: entityId,
@@ -296,10 +306,47 @@ export class LegacyEndpoint extends EntityEndpoint {
           pressureEntityId: effectiveMapping?.pressureEntity,
           batteryEntityId: effectiveMapping?.batteryEntity,
           customName: effectiveMapping?.customName,
-          areaName,
+          areaName: composedAreaName,
         });
         // Return as LegacyEndpoint-compatible (duck typed: entityId + updateStates)
         return composed as unknown as LegacyEndpoint;
+      }
+
+      // When this is a fan entity mapped as air_purifier, create a composed
+      // device with sensor/thermostat sub-endpoints from related entities on
+      // the same HA device (Matter spec 9.4.4).
+      const resolvedMatterType =
+        mapping?.matterDeviceType ??
+        (entityId.startsWith("fan.") ? "fan" : undefined);
+      if (resolvedMatterType === "air_purifier" && entity.device_id) {
+        const temperatureEntityId = registry.findTemperatureEntityForDevice(
+          entity.device_id,
+        );
+        const humidityEntityId = registry.findHumidityEntityForDevice(
+          entity.device_id,
+        );
+        const climateEntityId = registry.findClimateEntityForDevice(
+          entity.device_id,
+        );
+
+        // Only compose if at least one sub-entity is available
+        if (temperatureEntityId || humidityEntityId || climateEntityId) {
+          const composedAreaName = registry.getAreaName(entityId);
+          const composed = await ComposedAirPurifierEndpoint.create({
+            registry,
+            primaryEntityId: entityId,
+            temperatureEntityId,
+            humidityEntityId,
+            climateEntityId,
+            batteryEntityId: effectiveMapping?.batteryEntity,
+            mapping: effectiveMapping,
+            customName: effectiveMapping?.customName,
+            areaName: composedAreaName,
+          });
+          if (composed) {
+            return composed as unknown as LegacyEndpoint;
+          }
+        }
       }
     }
 
