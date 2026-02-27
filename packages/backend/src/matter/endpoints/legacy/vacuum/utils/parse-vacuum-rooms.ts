@@ -84,6 +84,7 @@ function parseRoomData(roomsData: unknown): VacuumRoom[] {
           // rooms from different floors collide (e.g. areaId 1 on 3 floors).
           const floorIndex = floorCounter++;
           for (const room of nestedRooms) {
+            room.mapName = key;
             if (typeof room.id === "number") {
               room.originalId = room.id;
               room.id = floorIndex * 10000 + room.id;

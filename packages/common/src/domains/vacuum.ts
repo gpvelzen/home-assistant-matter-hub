@@ -66,6 +66,12 @@ export interface VacuumRoom {
    * per-floor ID needed for actual vacuum clean commands.
    */
   originalId?: number | string;
+  /**
+   * Floor/map name for multi-floor vacuums (e.g. Dreame nested format).
+   * When present, enables the Matter ServiceArea Maps feature so controllers
+   * can group and filter rooms by floor.
+   */
+  mapName?: string;
 }
 
 /**

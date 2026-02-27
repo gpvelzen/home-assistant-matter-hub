@@ -5,7 +5,10 @@ import type {
 } from "@home-assistant-matter-hub/common";
 import { Logger } from "@matter/general";
 import type { ServiceArea } from "@matter/main/clusters";
-import { ServiceAreaServer } from "../../../../behaviors/service-area-server.js";
+import {
+  ServiceAreaServer,
+  ServiceAreaServerWithMaps,
+} from "../../../../behaviors/service-area-server.js";
 import { parseVacuumRooms } from "../utils/parse-vacuum-rooms.js";
 
 const logger = Logger.get("VacuumServiceAreaServer");
@@ -29,12 +32,35 @@ function toAreaId(roomId: string | number): number {
 }
 
 /**
- * Convert VacuumRoom array to Matter ServiceArea.Area array
+ * Extract unique maps (floors) from rooms that have mapName set.
+ * Returns an empty array when no rooms carry floor info.
  */
-function roomsToAreas(rooms: VacuumRoom[]): ServiceArea.Area[] {
+function extractMaps(rooms: VacuumRoom[]): ServiceArea.Map[] {
+  const seen = new Map<string, number>();
+  for (const room of rooms) {
+    if (room.mapName && !seen.has(room.mapName)) {
+      seen.set(room.mapName, seen.size + 1);
+    }
+  }
+  return Array.from(seen.entries()).map(([name, mapId]) => ({ mapId, name }));
+}
+
+/**
+ * Convert VacuumRoom array to Matter ServiceArea.Area array.
+ * When maps are provided, each area's mapId is set to link it to its floor.
+ */
+function roomsToAreas(
+  rooms: VacuumRoom[],
+  maps: ServiceArea.Map[] = [],
+): ServiceArea.Area[] {
+  const mapLookup = new Map<string, number>();
+  for (const m of maps) {
+    mapLookup.set(m.name, m.mapId);
+  }
+
   return rooms.map((room) => ({
     areaId: toAreaId(room.id),
-    mapId: null,
+    mapId: room.mapName ? (mapLookup.get(room.mapName) ?? null) : null,
     areaInfo: {
       locationInfo: {
         locationName: room.name,
@@ -154,7 +180,17 @@ export function createVacuumServiceAreaServer(
     }
   }
 
-  const supportedAreas = roomsToAreas(rooms);
+  const maps = extractMaps(rooms);
+  const supportedAreas = roomsToAreas(rooms, maps);
+
+  if (maps.length > 0) {
+    return ServiceAreaServerWithMaps({
+      supportedAreas,
+      supportedMaps: maps,
+      selectedAreas: [],
+      currentArea: null,
+    });
+  }
 
   return ServiceAreaServer({
     supportedAreas,

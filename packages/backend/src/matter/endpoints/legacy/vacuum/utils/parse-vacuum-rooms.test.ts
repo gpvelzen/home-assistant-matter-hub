@@ -55,8 +55,20 @@ describe("parseVacuumRooms", () => {
     };
     const result = parseVacuumRooms(attributes);
     expect(result).toEqual([
-      { id: 1, name: "Kitchen", icon: undefined, originalId: 1 },
-      { id: 2, name: "Living Room", icon: undefined, originalId: 2 },
+      {
+        id: 1,
+        name: "Kitchen",
+        icon: undefined,
+        originalId: 1,
+        mapName: "Ground Floor",
+      },
+      {
+        id: 2,
+        name: "Living Room",
+        icon: undefined,
+        originalId: 2,
+        mapName: "Ground Floor",
+      },
     ]);
   });
 
@@ -78,11 +90,27 @@ describe("parseVacuumRooms", () => {
     // All IDs must be unique
     const ids = result.map((r) => r.id);
     expect(new Set(ids).size).toBe(4);
-    // originalId preserves per-floor IDs
-    expect(result[0]).toMatchObject({ name: "Bedroom", originalId: 1 });
-    expect(result[1]).toMatchObject({ name: "Bathroom", originalId: 2 });
-    expect(result[2]).toMatchObject({ name: "Kitchen", originalId: 1 });
-    expect(result[3]).toMatchObject({ name: "Living Room", originalId: 2 });
+    // originalId preserves per-floor IDs, mapName preserves floor name
+    expect(result[0]).toMatchObject({
+      name: "Bedroom",
+      originalId: 1,
+      mapName: "Upstairs",
+    });
+    expect(result[1]).toMatchObject({
+      name: "Bathroom",
+      originalId: 2,
+      mapName: "Upstairs",
+    });
+    expect(result[2]).toMatchObject({
+      name: "Kitchen",
+      originalId: 1,
+      mapName: "Downstairs",
+    });
+    expect(result[3]).toMatchObject({
+      name: "Living Room",
+      originalId: 2,
+      mapName: "Downstairs",
+    });
     // Floor 0 IDs unchanged, Floor 1 IDs offset by 10000
     expect(result[0].id).toBe(1);
     expect(result[1].id).toBe(2);
