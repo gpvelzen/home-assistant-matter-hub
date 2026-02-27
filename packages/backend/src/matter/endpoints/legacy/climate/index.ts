@@ -152,18 +152,13 @@ export function ClimateDevice(
   const hasBatteryEntity = !!homeAssistantEntity.mapping?.batteryEntity;
   const hasBattery = hasBatteryAttr || hasBatteryEntity;
 
-  // heat_cool-only zones (e.g. HVAC zones that follow the main system) can't
-  // independently switch between heating and cooling. Expose as heating-only
-  // so Apple Home shows only Heat+Off modes instead of both Heat and Cool (#207).
-  // "Heat" effectively means "zone active (following system)".
-  const heatCoolOnly =
-    attributes.hvac_modes.includes(ClimateHvacMode.heat_cool) &&
-    !attributes.hvac_modes.includes(ClimateHvacMode.heat) &&
-    !attributes.hvac_modes.includes(ClimateHvacMode.cool);
-
-  const supportsCooling = heatCoolOnly
-    ? false
-    : coolingModes.some((mode) => attributes.hvac_modes.includes(mode));
+  // heat_cool-only zones (e.g. HVAC zones that follow the main system) get
+  // both Heating and Cooling features (without AutoMode). The thermostat
+  // server dynamically sets controlSequenceOfOperation to HeatingOnly or
+  // CoolingOnly based on hvac_action to reflect the main system's mode (#207).
+  const supportsCooling = coolingModes.some((mode) =>
+    attributes.hvac_modes.includes(mode),
+  );
   const hasExplicitHeating = heatingModes.some((mode) =>
     attributes.hvac_modes.includes(mode),
   );
@@ -230,9 +225,8 @@ export function ClimateDevice(
   // AutoMode only when device supports heat_cool (dual setpoint) AND has
   // explicit heat or cool modes. Devices with only 'auto' (single-setpoint)
   // must NOT get AutoMode — Apple Home would show Auto and expect dual
-  // setpoints, causing mode flipping. heat_cool-only zones (e.g. HVAC zones
-  // that follow the main system) also must NOT get AutoMode — they can't
-  // independently switch between heating and cooling (#207).
+  // setpoints, causing mode flipping. heat_cool-only zones are also excluded
+  // since they lack explicit heat/cool modes (#207).
   const autoMode =
     supportsHeating &&
     supportsCooling &&

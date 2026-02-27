@@ -86,6 +86,38 @@ function isHeatCoolOnly(modes: ClimateHvacMode[]): boolean {
   );
 }
 
+/**
+ * Track last known active HVAC direction for heat_cool-only zones.
+ * When idle, hvac_action doesn't reveal the main system's mode,
+ * so we remember the last active direction to avoid mode flipping.
+ */
+const lastHvacDirection = new Map<string, "heating" | "cooling">();
+
+function getHeatCoolOnlyDirection(
+  entity: HomeAssistantEntityState,
+  agent: Agent,
+): "heating" | "cooling" {
+  const action = attributes(entity).hvac_action;
+  const homeAssistant = agent.get(HomeAssistantEntityBehavior);
+  const entityId = homeAssistant.entityId;
+
+  if (
+    action === ClimateHvacAction.heating ||
+    action === ClimateHvacAction.preheating ||
+    action === ClimateHvacAction.defrosting ||
+    action === ClimateHvacAction.drying
+  ) {
+    lastHvacDirection.set(entityId, "heating");
+    return "heating";
+  }
+  if (action === ClimateHvacAction.cooling) {
+    lastHvacDirection.set(entityId, "cooling");
+    return "cooling";
+  }
+  // idle/off/fan: use last known direction, default to heating
+  return lastHvacDirection.get(entityId) ?? "heating";
+}
+
 const config: ThermostatServerConfig = {
   // Temperature range (target_temp_low/high) only works in heat_cool mode.
   // In heat or cool mode, HA expects a single "temperature" value.
@@ -113,7 +145,7 @@ const config: ThermostatServerConfig = {
     getTemp(agent, entity, "target_temp_high") ??
     getTemp(agent, entity, "target_temperature") ??
     getTemp(agent, entity, "temperature"),
-  getSystemMode: (entity) => {
+  getSystemMode: (entity, agent) => {
     const hvacMode = entity.state as ClimateHvacMode;
     const systemMode =
       hvacModeToSystemMode[hvacMode] ?? Thermostat.SystemMode.Off;
@@ -123,11 +155,13 @@ const config: ThermostatServerConfig = {
     if (systemMode === Thermostat.SystemMode.Auto) {
       const modes = attributes(entity).hvac_modes ?? [];
 
-      // heat_cool-only zones (e.g. HVAC zones that follow the main system):
-      // Exposed as Heating-only devices (#207). Always return Heat — the zone
-      // can't independently switch, and Cool is invalid for a Heating-only device.
+      // heat_cool-only zones: dynamically switch between Heat and Cool
+      // based on hvac_action to reflect the main system's mode (#207).
       if (isHeatCoolOnly(modes)) {
-        return Thermostat.SystemMode.Heat;
+        const direction = getHeatCoolOnlyDirection(entity, agent);
+        return direction === "cooling"
+          ? Thermostat.SystemMode.Cool
+          : Thermostat.SystemMode.Heat;
       }
 
       // Device supports heat_cool with explicit heat/cool: keep SystemMode.Auto
@@ -161,25 +195,20 @@ const config: ThermostatServerConfig = {
     if (!action) {
       return Thermostat.ThermostatRunningMode.Off;
     }
-    const runningMode =
-      hvacActionToRunningMode[action] ?? Thermostat.ThermostatRunningMode.Off;
-    // heat_cool-only zones are exposed as Heating-only (#207).
-    // Remap Cool→Heat so thermostatRunningState doesn't set cool=true.
-    if (
-      runningMode === Thermostat.ThermostatRunningMode.Cool &&
-      isHeatCoolOnly(attributes(entity).hvac_modes ?? [])
-    ) {
-      return Thermostat.ThermostatRunningMode.Heat;
-    }
-    return runningMode;
+    return (
+      hvacActionToRunningMode[action] ?? Thermostat.ThermostatRunningMode.Off
+    );
   },
-  getControlSequence: (entity) => {
+  getControlSequence: (entity, agent) => {
     const modes = attributes(entity).hvac_modes ?? [];
 
-    // heat_cool-only zones: exposed as Heating-only devices (#207).
-    // Always report HeatingOnly — CoolingOnly is invalid for the feature set.
+    // heat_cool-only zones: dynamically report HeatingOnly or CoolingOnly
+    // based on hvac_action to reflect the main system's current mode (#207).
     if (isHeatCoolOnly(modes)) {
-      return Thermostat.ControlSequenceOfOperation.HeatingOnly;
+      const direction = getHeatCoolOnlyDirection(entity, agent);
+      return direction === "cooling"
+        ? Thermostat.ControlSequenceOfOperation.CoolingOnly
+        : Thermostat.ControlSequenceOfOperation.HeatingOnly;
     }
 
     const hasCooling = modes.some(
