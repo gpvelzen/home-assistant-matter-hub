@@ -63,6 +63,20 @@ export function AirPurifierEndpoint(
   if (testBit(supportedFeatures, FanDeviceFeature.DIRECTION)) {
     features.add("AirflowDirection");
   }
+  if (testBit(supportedFeatures, FanDeviceFeature.OSCILLATE)) {
+    features.add("Rocking");
+  }
+  // Enable Wind mode if fan has natural/sleep preset modes
+  const presetModes = attributes.preset_modes ?? [];
+  const hasWindModes = presetModes.some(
+    (m) =>
+      m.toLowerCase() === "natural" ||
+      m.toLowerCase() === "nature" ||
+      m.toLowerCase() === "sleep",
+  );
+  if (hasWindModes) {
+    features.add("Wind");
+  }
 
   // Base device with fan control behaviors
   const baseDevice = Device.with(
