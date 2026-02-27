@@ -12,12 +12,15 @@ import DLinkIcon from "../../assets/brands/D-Link.svg?react";
 import DreameIcon from "../../assets/brands/Dreame.svg?react";
 import GoogleIcon from "../../assets/brands/Google.svg?react";
 import IKEAIcon from "../../assets/brands/IKEA.svg?react";
+import iRobotIcon from "../../assets/brands/iRobot.svg?react";
 import LGElectronicsIcon from "../../assets/brands/LG Electronics.svg?react";
 import LGThinQIcon from "../../assets/brands/LG ThinQ.svg?react";
 import LidlIcon from "../../assets/brands/Lidl.svg?react";
 import MerossIcon from "../../assets/brands/Meross.svg?react";
 import NukiIcon from "../../assets/brands/Nuki.svg?react";
 import PanasonicIcon from "../../assets/brands/Panasonic.svg?react";
+import RazerIcon from "../../assets/brands/Razer.svg?react";
+import RoborockIcon from "../../assets/brands/Roborock.svg?react";
 import SamsungIcon from "../../assets/brands/Samsung.svg?react";
 import SamsungSmartThingsIcon from "../../assets/brands/Samsung SmartThings.svg?react";
 import ShellyIcon from "../../assets/brands/Shelly.svg?react";
@@ -73,8 +76,11 @@ const iconPerVendorId: Record<number, FC<SVGProps<SVGSVGElement>> | undefined> =
     4996: AppleIcon,
     5009: TPLinkIcon,
     5010: TPLinkIcon,
+    5023: RazerIcon,
+    5248: RoborockIcon,
     5264: ShellyIcon,
     5420: DreameIcon,
+    5398: iRobotIcon,
     5427: AnkerIcon,
     24582: GoogleIcon,
   };
