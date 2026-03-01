@@ -22,6 +22,7 @@ import {
   isRoborockVacuum,
   isXiaomiMiotVacuum,
   parseVacuumRooms,
+  ROOM_MODE_BASE,
 } from "../utils/parse-vacuum-rooms.js";
 import { toAreaId } from "./vacuum-service-area-server.js";
 
@@ -37,6 +38,7 @@ const logger = Logger.get("VacuumRvcRunModeServer");
 function buildSupportedModes(
   attributes: VacuumDeviceAttributes,
   includeUnnamedRooms = false,
+  customAreas?: CustomServiceArea[],
 ): RvcRunMode.ModeOption[] {
   const modes: RvcRunMode.ModeOption[] = [
     {
@@ -51,25 +53,45 @@ function buildSupportedModes(
     },
   ];
 
-  // Add room-specific cleaning modes when rooms are available.
   // Apple Home does not call ServiceArea.selectAreas before changeToMode,
   // so room modes in RvcRunMode are the only way to trigger room cleaning.
   // ServiceArea rooms are kept as well for controllers that do support it.
   //
-  // IMPORTANT: Sort rooms alphabetically by name. Apple Home displays modes
-  // sorted alphabetically but uses positional indexing into the original
-  // mode array when calling changeToMode, so registration order must match.
-  const rooms = parseVacuumRooms(attributes, includeUnnamedRooms);
-  rooms.sort((a, b) => a.name.localeCompare(b.name));
-  for (const room of rooms) {
-    const modeValue = getRoomModeValue(room);
-    // Mode values must fit in uint8 (Matter spec: ModeBase mode is uint8)
-    if (modeValue > 255) continue;
-    modes.push({
-      label: room.name,
-      mode: modeValue,
-      modeTags: [{ value: RvcRunMode.ModeTag.Cleaning }],
-    });
+  // IMPORTANT: Sort rooms/areas alphabetically by name. Apple Home displays
+  // modes sorted alphabetically but uses positional indexing into the
+  // original mode array when calling changeToMode, so registration order
+  // must match.
+
+  if (customAreas && customAreas.length > 0) {
+    // Custom service areas replace parsed rooms for mode generation.
+    // Mode values use ROOM_MODE_BASE + (1-based sorted index) to stay
+    // consistent with createCustomServiceAreaServer area IDs after sorting.
+    const sorted = [...customAreas].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    for (let i = 0; i < sorted.length; i++) {
+      const modeValue = ROOM_MODE_BASE + i + 1;
+      if (modeValue > 255) continue;
+      modes.push({
+        label: sorted[i].name,
+        mode: modeValue,
+        modeTags: [{ value: RvcRunMode.ModeTag.Cleaning }],
+      });
+    }
+  } else {
+    // Regular room modes from vacuum attributes (Dreame, Roborock, etc.)
+    const rooms = parseVacuumRooms(attributes, includeUnnamedRooms);
+    rooms.sort((a, b) => a.name.localeCompare(b.name));
+    for (const room of rooms) {
+      const modeValue = getRoomModeValue(room);
+      // Mode values must fit in uint8 (Matter spec: ModeBase mode is uint8)
+      if (modeValue > 255) continue;
+      modes.push({
+        label: room.name,
+        mode: modeValue,
+        modeTags: [{ value: RvcRunMode.ModeTag.Cleaning }],
+      });
+    }
   }
 
   return modes;
@@ -337,29 +359,18 @@ const vacuumRvcRunModeConfig = {
     const entity = homeAssistant.entity;
     const attributes = entity.state.attributes as VacuumDeviceAttributes;
 
-    const rooms = parseVacuumRooms(attributes);
-    const numericIdFromMode = getRoomIdFromMode(roomMode);
+    logger.info(`cleanRoom called: roomMode=${roomMode}`);
 
-    logger.info(
-      `cleanRoom called: roomMode=${roomMode}, numericIdFromMode=${numericIdFromMode}`,
-    );
-    logger.info(
-      `Available rooms: ${JSON.stringify(rooms.map((r) => ({ id: r.id, name: r.name, modeValue: getRoomModeValue(r) })))}`,
-    );
-
-    // Find the room by matching mode value (ensures consistency)
-    const room = rooms.find((r) => getRoomModeValue(r) === roomMode);
-
-    logger.info(
-      `Found room by mode match: ${room ? `${room.name} (id=${room.id})` : "none"}`,
-    );
-
-    // Check for user-defined custom service areas (lawn mowers, generic zone robots).
-    // Match the resolved room name to the custom area name.
+    // Handle user-defined custom service areas first (lawn mowers, generic zone robots).
+    // Mode values for custom areas: ROOM_MODE_BASE + (1-based sorted index).
     const customAreas = homeAssistant.state.mapping?.customServiceAreas;
-    if (customAreas && customAreas.length > 0 && room) {
-      const area = customAreas.find((a) => a.name === room.name);
-      if (area) {
+    if (customAreas && customAreas.length > 0) {
+      const sorted = [...customAreas].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+      const areaIndex = roomMode - ROOM_MODE_BASE - 1;
+      if (areaIndex >= 0 && areaIndex < sorted.length) {
+        const area = sorted[areaIndex];
         logger.info(
           `cleanRoom: custom service area "${area.name}" → ${area.service}`,
         );
@@ -370,6 +381,17 @@ const vacuumRvcRunModeConfig = {
         };
       }
     }
+
+    // Regular room handling from vacuum attributes (Dreame, Roborock, etc.)
+    const rooms = parseVacuumRooms(attributes);
+    const numericIdFromMode = getRoomIdFromMode(roomMode);
+
+    logger.info(
+      `cleanRoom: numericIdFromMode=${numericIdFromMode}, available rooms: ${JSON.stringify(rooms.map((r) => ({ id: r.id, name: r.name, modeValue: getRoomModeValue(r) })))}`,
+    );
+
+    // Find the room by matching mode value (ensures consistency)
+    const room = rooms.find((r) => getRoomModeValue(r) === roomMode);
 
     if (room) {
       // Use originalId for commands (Dreame multi-floor: id is deduplicated, originalId is per-floor)
@@ -462,6 +484,7 @@ const vacuumRvcRunModeConfig = {
 export function createVacuumRvcRunModeServer(
   attributes: VacuumDeviceAttributes,
   includeUnnamedRooms = false,
+  customAreas?: CustomServiceArea[],
 ) {
   // Get all rooms first for logging
   const allRooms = parseVacuumRooms(attributes, true);
@@ -470,7 +493,11 @@ export function createVacuumRvcRunModeServer(
     : parseVacuumRooms(attributes, false);
   const filteredCount = allRooms.length - rooms.length;
 
-  const supportedModes = buildSupportedModes(attributes, includeUnnamedRooms);
+  const supportedModes = buildSupportedModes(
+    attributes,
+    includeUnnamedRooms,
+    customAreas,
+  );
 
   logger.info(
     `Creating VacuumRvcRunModeServer with ${rooms.length} rooms, ${supportedModes.length} total modes`,

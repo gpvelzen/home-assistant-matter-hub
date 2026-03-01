@@ -45,14 +45,22 @@ export function VacuumDevice(
   const entityId = homeAssistantEntity.entity.entity_id;
   const attributes = homeAssistantEntity.entity.state
     .attributes as VacuumDeviceAttributes;
+  const customAreas = homeAssistantEntity.mapping?.customServiceAreas;
+
   // Debug: Log mapping info
   logger.info(
     `Creating vacuum endpoint for ${entityId}, mapping: ${JSON.stringify(homeAssistantEntity.mapping ?? "none")}`,
   );
 
-  // Add RvcRunModeServer with initial supportedModes (including room modes if available)
+  // Add RvcRunModeServer with initial supportedModes (including room modes if available).
+  // Custom service areas are passed so they get registered as room modes —
+  // Apple Home uses RvcRunMode (not ServiceArea.selectAreas) for zone selection.
   let device = VacuumEndpointType.with(
-    createVacuumRvcRunModeServer(attributes),
+    createVacuumRvcRunModeServer(
+      attributes,
+      false,
+      customAreas && customAreas.length > 0 ? customAreas : undefined,
+    ),
   ).set({ homeAssistantEntity });
 
   // OnOff is NOT part of the RoboticVacuumCleaner device type spec.
@@ -72,7 +80,6 @@ export function VacuumDevice(
 
   // ServiceArea — included when rooms/custom areas are configured.
   // When minimalClusters is enabled, skip the default placeholder area.
-  const customAreas = homeAssistantEntity.mapping?.customServiceAreas;
   const roomEntities = homeAssistantEntity.mapping?.roomEntities;
   const rooms = parseVacuumRooms(attributes);
   logger.info(
