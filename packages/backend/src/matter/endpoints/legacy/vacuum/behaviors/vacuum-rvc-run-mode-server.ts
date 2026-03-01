@@ -107,13 +107,14 @@ function handleCustomServiceAreas(
   homeAssistant: HomeAssistantEntityBehavior,
   serviceArea: { state: { selectedAreas: number[] } },
 ) {
-  // Clear selected areas after use
-  serviceArea.state.selectedAreas = [];
-
   // Map area IDs back to custom area configs (IDs are 1-based index)
   const matched = selectedAreas
     .map((areaId) => customAreas[areaId - 1])
     .filter(Boolean);
+
+  // Clear selected areas after mapping (not before — a proxied
+  // reference would be invalidated by Datasource subref refresh).
+  serviceArea.state.selectedAreas = [];
 
   if (matched.length === 0) {
     logger.warn(
@@ -173,9 +174,12 @@ const vacuumRvcRunModeConfig = {
     // Check if there are selected areas from ServiceArea
     try {
       const serviceArea = agent.get(ServiceAreaBehavior);
-      const selectedAreas = serviceArea.state.selectedAreas;
+      // IMPORTANT: Snapshot-copy the array. Matter.js managed state
+      // returns proxied arrays; clearing the state later would
+      // invalidate a live reference (Datasource subref refresh).
+      const selectedAreas = [...serviceArea.state.selectedAreas];
 
-      if (selectedAreas && selectedAreas.length > 0) {
+      if (selectedAreas.length > 0) {
         const homeAssistant = agent.get(HomeAssistantEntityBehavior);
         const entity = homeAssistant.entity;
         const attributes = entity.state.attributes as VacuumDeviceAttributes;
