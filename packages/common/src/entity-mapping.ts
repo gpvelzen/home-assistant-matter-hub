@@ -128,7 +128,7 @@ export interface EntityMappingConfig {
   /**
    * Optional: Map custom fan speed / suction level options to Matter intensity tags.
    * Key is the Home Assistant option string ("low", "medium" etc.).
-   * Value is the string representation of the Matter ModeTag ("quiet", "auto", "max").
+   * Value is the Matter ModeTag.
    */
   readonly customFanSpeedTags?: Record<string, number>;
 }
