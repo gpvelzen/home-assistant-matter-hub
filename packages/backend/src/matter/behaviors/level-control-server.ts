@@ -13,8 +13,16 @@ const lastTurnOnTimestamps = new Map<string, number>();
 // Track optimistic level writes to prevent stale HA state from overwriting them.
 // After a controller command, the HA state update with the OLD brightness can
 // arrive before HA processes the new command, causing the UI to revert.
-const optimisticLevelTimestamps = new Map<string, number>();
-const OPTIMISTIC_LEVEL_COOLDOWN_MS = 2000;
+// Instead of a blanket cooldown, we track the expected level and only skip HA
+// updates that report a DIFFERENT (stale) value. Updates confirming the expected
+// value (within tolerance) are accepted immediately.
+interface OptimisticLevelState {
+  expectedLevel: number;
+  timestamp: number;
+}
+const optimisticLevelState = new Map<string, OptimisticLevelState>();
+const OPTIMISTIC_TIMEOUT_MS = 3000;
+const OPTIMISTIC_TOLERANCE = 5;
 
 /**
  * Called by OnOffServer when a light is turned on via Matter command.
@@ -90,14 +98,20 @@ export class LevelControlServerBase extends FeaturedBase {
       currentLevel = Math.min(Math.max(minLevel, currentLevel), maxLevel);
     }
 
-    // Skip currentLevel during optimistic cooldown to prevent stale HA state
-    // from reverting the value set by a controller command.
-    const lastOptimistic = optimisticLevelTimestamps.get(entity.entity_id);
-    const inCooldown =
-      lastOptimistic != null &&
-      Date.now() - lastOptimistic < OPTIMISTIC_LEVEL_COOLDOWN_MS;
-    if (inCooldown && currentLevel != null) {
-      currentLevel = null;
+    // Protect optimistic level from stale HA state updates.
+    // Accept updates that confirm the expected value; skip stale ones.
+    const optimistic = optimisticLevelState.get(entity.entity_id);
+    if (optimistic != null && currentLevel != null) {
+      if (Date.now() - optimistic.timestamp > OPTIMISTIC_TIMEOUT_MS) {
+        optimisticLevelState.delete(entity.entity_id);
+      } else if (
+        Math.abs(currentLevel - optimistic.expectedLevel) <=
+        OPTIMISTIC_TOLERANCE
+      ) {
+        optimisticLevelState.delete(entity.entity_id);
+      } else {
+        currentLevel = null;
+      }
     }
 
     applyPatchState(this.state, {
@@ -186,7 +200,10 @@ export class LevelControlServerBase extends FeaturedBase {
     // in the command response. Without this, Apple Home reads the stale
     // currentLevel before the HA state update arrives and reverts the UI.
     this.state.currentLevel = level;
-    optimisticLevelTimestamps.set(entityId, Date.now());
+    optimisticLevelState.set(entityId, {
+      expectedLevel: level,
+      timestamp: Date.now(),
+    });
     homeAssistant.callAction(action);
   }
 }

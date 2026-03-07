@@ -8,8 +8,13 @@ import type { ValueGetter, ValueSetter } from "./utils/cluster-config.js";
 
 const logger = Logger.get("SpeakerLevelControlServer");
 
-const optimisticLevelTimestamps = new Map<string, number>();
-const OPTIMISTIC_LEVEL_COOLDOWN_MS = 2000;
+interface OptimisticLevelState {
+  expectedLevel: number;
+  timestamp: number;
+}
+const optimisticLevelState = new Map<string, OptimisticLevelState>();
+const OPTIMISTIC_TIMEOUT_MS = 3000;
+const OPTIMISTIC_TOLERANCE = 5;
 
 export interface SpeakerLevelControlConfig {
   getValuePercent: ValueGetter<number | null>;
@@ -86,12 +91,18 @@ export class SpeakerLevelControlServerBase extends FeaturedBase {
       `[${entityId}] Volume update: HA=${currentLevelPercent != null ? Math.round(currentLevelPercent * 100) : "null"}% -> currentLevel=${currentLevel}`,
     );
 
-    const lastOptimistic = optimisticLevelTimestamps.get(entity.entity_id);
-    const inCooldown =
-      lastOptimistic != null &&
-      Date.now() - lastOptimistic < OPTIMISTIC_LEVEL_COOLDOWN_MS;
-    if (inCooldown && currentLevel != null) {
-      currentLevel = null;
+    const optimistic = optimisticLevelState.get(entity.entity_id);
+    if (optimistic != null && currentLevel != null) {
+      if (Date.now() - optimistic.timestamp > OPTIMISTIC_TIMEOUT_MS) {
+        optimisticLevelState.delete(entity.entity_id);
+      } else if (
+        Math.abs(currentLevel - optimistic.expectedLevel) <=
+        OPTIMISTIC_TOLERANCE
+      ) {
+        optimisticLevelState.delete(entity.entity_id);
+      } else {
+        currentLevel = null;
+      }
     }
 
     applyPatchState(this.state, {
@@ -151,7 +162,10 @@ export class SpeakerLevelControlServerBase extends FeaturedBase {
       return;
     }
     this.state.currentLevel = level;
-    optimisticLevelTimestamps.set(entityId, Date.now());
+    optimisticLevelState.set(entityId, {
+      expectedLevel: level,
+      timestamp: Date.now(),
+    });
     homeAssistant.callAction(
       config.moveToLevelPercent(levelPercent, this.agent),
     );
