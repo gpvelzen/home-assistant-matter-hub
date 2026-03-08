@@ -3,19 +3,12 @@ import type {
   CreateBridgeRequest,
   UpdateBridgeRequest,
 } from "@home-assistant-matter-hub/common";
+import { assertOk, parseJsonResponse } from "./fetch-utils.js";
 
 export async function fetchBridges() {
   const res = await fetch(`api/matter/bridges?_s=${Date.now()}`);
-  if (!res.ok) {
-    const err = await res
-      .json()
-      .catch(() => ({ error: "Failed to fetch bridges" }));
-    throw new Error(
-      (err as { error?: string }).error ??
-        `Failed to fetch bridges (${res.status})`,
-    );
-  }
-  return (await res.json()) as BridgeDataWithMetadata[];
+  await assertOk(res, "Failed to fetch bridges");
+  return parseJsonResponse<BridgeDataWithMetadata[]>(res);
 }
 
 export async function createBridge(req: CreateBridgeRequest) {
@@ -26,16 +19,8 @@ export async function createBridge(req: CreateBridgeRequest) {
     },
     body: JSON.stringify(req),
   });
-  if (!res.ok) {
-    const err = await res
-      .json()
-      .catch(() => ({ error: "Failed to create bridge" }));
-    throw new Error(
-      (err as { error?: string }).error ??
-        `Failed to create bridge (${res.status})`,
-    );
-  }
-  return (await res.json()) as BridgeDataWithMetadata;
+  await assertOk(res, "Failed to create bridge");
+  return parseJsonResponse<BridgeDataWithMetadata>(res);
 }
 
 export async function updateBridge(req: UpdateBridgeRequest) {
@@ -46,16 +31,8 @@ export async function updateBridge(req: UpdateBridgeRequest) {
     },
     body: JSON.stringify(req),
   });
-  if (!res.ok) {
-    const err = await res
-      .json()
-      .catch(() => ({ error: "Failed to update bridge" }));
-    throw new Error(
-      (err as { error?: string }).error ??
-        `Failed to update bridge (${res.status})`,
-    );
-  }
-  return (await res.json()) as BridgeDataWithMetadata;
+  await assertOk(res, "Failed to update bridge");
+  return parseJsonResponse<BridgeDataWithMetadata>(res);
 }
 
 export async function deleteBridge(bridgeId: string) {
@@ -71,24 +48,18 @@ export async function resetBridge(bridgeId: string) {
       method: "POST",
     },
   );
-  if (!res.ok) {
-    const err = await res
-      .json()
-      .catch(() => ({ error: "Factory reset failed" }));
-    throw new Error(
-      (err as { error?: string }).error ??
-        `Factory reset failed (${res.status})`,
-    );
-  }
-  return (await res.json()) as BridgeDataWithMetadata;
+  await assertOk(res, "Factory reset failed");
+  return parseJsonResponse<BridgeDataWithMetadata>(res);
 }
 
 export async function forceSyncBridge(
   bridgeId: string,
 ): Promise<{ syncedCount: number; bridge: BridgeDataWithMetadata }> {
-  return await fetch(`api/matter/bridges/${bridgeId}/actions/force-sync`, {
+  const res = await fetch(`api/matter/bridges/${bridgeId}/actions/force-sync`, {
     method: "POST",
-  }).then((res) => res.json());
+  });
+  await assertOk(res, "Force sync failed");
+  return parseJsonResponse(res);
 }
 
 export async function openCommissioningWindow(
@@ -98,16 +69,8 @@ export async function openCommissioningWindow(
     `api/matter/bridges/${bridgeId}/actions/open-commissioning-window`,
     { method: "POST" },
   );
-  if (!res.ok) {
-    const err = await res
-      .json()
-      .catch(() => ({ error: "Failed to open commissioning window" }));
-    throw new Error(
-      (err as { error?: string }).error ??
-        "Failed to open commissioning window",
-    );
-  }
-  return res.json();
+  await assertOk(res, "Failed to open commissioning window");
+  return parseJsonResponse(res);
 }
 
 export interface BridgePriorityUpdate {
@@ -137,7 +100,8 @@ export async function startAllBridges(): Promise<{
   const res = await fetch("api/matter/bridges/actions/start-all", {
     method: "POST",
   });
-  return res.json();
+  await assertOk(res, "Failed to start all bridges");
+  return parseJsonResponse(res);
 }
 
 export async function stopAllBridges(): Promise<{
@@ -147,7 +111,8 @@ export async function stopAllBridges(): Promise<{
   const res = await fetch("api/matter/bridges/actions/stop-all", {
     method: "POST",
   });
-  return res.json();
+  await assertOk(res, "Failed to stop all bridges");
+  return parseJsonResponse(res);
 }
 
 export async function restartAllBridges(): Promise<{
@@ -157,7 +122,8 @@ export async function restartAllBridges(): Promise<{
   const res = await fetch("api/matter/bridges/actions/restart-all", {
     method: "POST",
   });
-  return res.json();
+  await assertOk(res, "Failed to restart all bridges");
+  return parseJsonResponse(res);
 }
 
 export async function cloneBridge(
@@ -166,9 +132,6 @@ export async function cloneBridge(
   const res = await fetch(`api/matter/bridges/${bridgeId}/clone`, {
     method: "POST",
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Clone failed" }));
-    throw new Error((err as { error?: string }).error ?? "Clone failed");
-  }
-  return res.json() as Promise<BridgeDataWithMetadata>;
+  await assertOk(res, "Clone failed");
+  return parseJsonResponse<BridgeDataWithMetadata>(res);
 }

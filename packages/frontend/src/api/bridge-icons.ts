@@ -1,3 +1,5 @@
+import { assertOk, parseJsonResponse } from "./fetch-utils.js";
+
 const BASE_URL = "api/bridge-icons";
 
 export async function uploadBridgeIcon(
@@ -11,24 +13,15 @@ export async function uploadBridgeIcon(
     method: "POST",
     body: formData,
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to upload icon");
-  }
-
-  return response.json();
+  await assertOk(response, "Failed to upload icon");
+  return parseJsonResponse(response);
 }
 
 export async function deleteBridgeIcon(bridgeId: string): Promise<void> {
   const response = await fetch(`${BASE_URL}/${bridgeId}`, {
     method: "DELETE",
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to delete icon");
-  }
+  await assertOk(response, "Failed to delete icon");
 }
 
 export async function checkBridgeIconExists(

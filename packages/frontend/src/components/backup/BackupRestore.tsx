@@ -114,8 +114,16 @@ export function BackupRestore() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to parse backup");
+        const text = await response.text();
+        let msg = "Failed to parse backup";
+        try {
+          const data = JSON.parse(text);
+          if (data.error) msg = data.error;
+        } catch {
+          if (text)
+            msg = `${msg} (HTTP ${response.status}: ${text.slice(0, 120)})`;
+        }
+        throw new Error(msg);
       }
 
       const previewData = (await response.json()) as BackupPreview;
@@ -157,8 +165,16 @@ export function BackupRestore() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to restore backup");
+        const text = await response.text();
+        let msg = "Failed to restore backup";
+        try {
+          const data = JSON.parse(text);
+          if (data.error) msg = data.error;
+        } catch {
+          if (text)
+            msg = `${msg} (HTTP ${response.status}: ${text.slice(0, 120)})`;
+        }
+        throw new Error(msg);
       }
 
       const result = (await response.json()) as RestoreResult;

@@ -3,6 +3,7 @@ import type {
   MappingProfileImportPreview,
   MappingProfileImportResult,
 } from "@home-assistant-matter-hub/common";
+import { assertOk, parseJsonResponse } from "./fetch-utils.js";
 
 export async function exportMappingProfile(
   bridgeId: string,
@@ -11,10 +12,8 @@ export async function exportMappingProfile(
   const response = await fetch(
     `api/mapping-profiles/export/${bridgeId}?name=${encodeURIComponent(profileName)}`,
   );
-  if (!response.ok) {
-    throw new Error(`Failed to export mapping profile: ${response.statusText}`);
-  }
-  return response.json();
+  await assertOk(response, "Failed to export mapping profile");
+  return parseJsonResponse(response);
 }
 
 export async function previewMappingProfileImport(
@@ -30,10 +29,8 @@ export async function previewMappingProfileImport(
       body: JSON.stringify({ profile, availableEntityIds }),
     },
   );
-  if (!response.ok) {
-    throw new Error(`Failed to preview import: ${response.statusText}`);
-  }
-  return response.json();
+  await assertOk(response, "Failed to preview import");
+  return parseJsonResponse(response);
 }
 
 export async function applyMappingProfileImport(
@@ -49,8 +46,6 @@ export async function applyMappingProfileImport(
       body: JSON.stringify({ profile, selectedEntityIds }),
     },
   );
-  if (!response.ok) {
-    throw new Error(`Failed to apply mapping profile: ${response.statusText}`);
-  }
-  return response.json();
+  await assertOk(response, "Failed to apply mapping profile");
+  return parseJsonResponse(response);
 }
