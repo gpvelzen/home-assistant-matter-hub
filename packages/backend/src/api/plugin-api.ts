@@ -1,7 +1,22 @@
+import * as nodePath from "node:path";
 import express from "express";
 import { PluginInstaller } from "../plugins/plugin-installer.js";
 import { PluginRegistry } from "../plugins/plugin-registry.js";
 import type { BridgeService } from "../services/bridges/bridge-service.js";
+
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50 MB
+const BLOCKED_PREFIXES = [
+  "/bin",
+  "/sbin",
+  "/usr",
+  "/etc",
+  "/var",
+  "/sys",
+  "/proc",
+  "/dev",
+  "/boot",
+  "/root",
+];
 
 export function pluginApi(
   bridgeService: BridgeService,
@@ -257,8 +272,17 @@ export function pluginApi(
   router.post("/upload", async (req, res) => {
     try {
       const chunks: Buffer[] = [];
+      let totalSize = 0;
       for await (const chunk of req) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        totalSize += buf.length;
+        if (totalSize > MAX_UPLOAD_BYTES) {
+          res.status(413).json({
+            error: `Upload exceeds ${MAX_UPLOAD_BYTES / 1024 / 1024}MB limit`,
+          });
+          return;
+        }
+        chunks.push(buf);
       }
       const tgzBuffer = Buffer.concat(chunks);
 
@@ -302,6 +326,14 @@ export function pluginApi(
 
     if (!localPath || typeof localPath !== "string") {
       res.status(400).json({ error: "path is required" });
+      return;
+    }
+
+    const resolved = nodePath.resolve(localPath);
+    if (BLOCKED_PREFIXES.some((p) => resolved.startsWith(p))) {
+      res
+        .status(400)
+        .json({ error: "Path is inside a restricted system directory" });
       return;
     }
 
