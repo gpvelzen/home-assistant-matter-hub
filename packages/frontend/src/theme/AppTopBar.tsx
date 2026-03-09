@@ -25,6 +25,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Tooltip from "@mui/material/Tooltip";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router";
 import { LogViewer } from "../components/logs/LogViewer.tsx";
 import { StatusIndicator } from "../components/status/StatusIndicator.tsx";
@@ -56,10 +57,16 @@ export const AppTopBar = () => {
     setMode(mode === "dark" ? "light" : "dark");
   };
 
+  const { t } = useTranslation();
+
   const navItems: NavItem[] = [
-    { label: "Dashboard", icon: <HomeIcon />, to: navigation.dashboard },
-    { label: "Bridges", icon: <HubIcon />, to: navigation.bridges },
-    { label: "All Devices", icon: <DevicesIcon />, to: navigation.devices },
+    {
+      label: t("dashboard.title"),
+      icon: <HomeIcon />,
+      to: navigation.dashboard,
+    },
+    { label: t("nav.bridges"), icon: <HubIcon />, to: navigation.bridges },
+    { label: t("nav.devices"), icon: <DevicesIcon />, to: navigation.devices },
     {
       label: "Network Map",
       icon: <AccountTreeIcon />,
@@ -76,7 +83,11 @@ export const AppTopBar = () => {
       to: navigation.lockCredentials,
     },
     { label: "Filter Reference", icon: <LabelIcon />, to: navigation.labels },
-    { label: "Settings", icon: <SettingsIcon />, to: navigation.settings },
+    {
+      label: t("nav.settings"),
+      icon: <SettingsIcon />,
+      to: navigation.settings,
+    },
     {
       label: mode === "dark" ? "Light Mode" : "Dark Mode",
       icon: mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />,
@@ -88,7 +99,7 @@ export const AppTopBar = () => {
       onClick: () => setLogViewerOpen(true),
     },
     {
-      label: "Health Dashboard",
+      label: t("nav.health"),
       icon: <MonitorHeartIcon />,
       to: navigation.health,
     },
