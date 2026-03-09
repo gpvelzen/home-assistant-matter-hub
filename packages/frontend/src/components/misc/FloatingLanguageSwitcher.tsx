@@ -9,7 +9,7 @@ import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Typography from "@mui/material/Typography";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface LanguageOption {
@@ -18,7 +18,7 @@ interface LanguageOption {
   name: string;
 }
 
-const languages: LanguageOption[] = [
+const BUILT_IN_LANGUAGES: LanguageOption[] = [
   { code: "en", flag: "🇬🇧", name: "English" },
   { code: "de", flag: "🇩🇪", name: "Deutsch" },
   { code: "fr", flag: "🇫🇷", name: "Français" },
@@ -29,6 +29,19 @@ const languages: LanguageOption[] = [
   { code: "sv", flag: "🇸🇪", name: "Svenska" },
 ];
 
+const CUSTOM_LANGS_KEY = "hamh-custom-languages";
+
+function loadCustomLanguages(): LanguageOption[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_LANGS_KEY);
+    if (!raw) return [];
+    const langs = JSON.parse(raw) as Array<{ code: string; name: string }>;
+    return langs.map((l) => ({ code: l.code, flag: "🌐", name: l.name }));
+  } catch {
+    return [];
+  }
+}
+
 const TRANSLATIONS_ISSUE_URL =
   "https://github.com/RiDDiX/home-assistant-matter-hub/issues/new?labels=translation&title=Translation+improvement";
 
@@ -36,6 +49,11 @@ export function FloatingLanguageSwitcher() {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
+
+  const languages = useMemo(
+    () => [...BUILT_IN_LANGUAGES, ...loadCustomLanguages()],
+    [],
+  );
 
   const currentLang = i18n.language?.split("-")[0] ?? "en";
 
@@ -93,7 +111,7 @@ export function FloatingLanguageSwitcher() {
                   overflow: "hidden",
                 }}
               >
-                {languages.map((lang) => (
+                {languages.map((lang: LanguageOption) => (
                   <Box
                     key={lang.code}
                     onClick={() => handleSelect(lang.code)}
