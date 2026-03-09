@@ -1,4 +1,4 @@
-import { exec } from "node:child_process";
+import { execFile } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Logger } from "@matter/general";
@@ -67,8 +67,9 @@ export class PluginInstaller {
     logger.info(`Installing plugin: ${packageName}`);
 
     return new Promise((resolve) => {
-      exec(
-        `npm install ${packageName} --save`,
+      execFile(
+        "npm",
+        ["install", packageName, "--save"],
         {
           cwd: this.pluginDir,
           timeout: 120_000,
@@ -115,8 +116,9 @@ export class PluginInstaller {
     logger.info(`Uninstalling plugin: ${packageName}`);
 
     return new Promise((resolve) => {
-      exec(
-        `npm uninstall ${packageName} --save`,
+      execFile(
+        "npm",
+        ["uninstall", packageName, "--save"],
         {
           cwd: this.pluginDir,
           timeout: 60_000,

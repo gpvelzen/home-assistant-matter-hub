@@ -70,16 +70,19 @@ export class SafePluginRunner {
       return undefined;
     }
 
+    const timeout = this.createTimeout<T>(pluginName, operation, timeoutMs);
     try {
       const result = await Promise.race([
         Promise.resolve().then(fn),
-        this.createTimeout<T>(pluginName, operation, timeoutMs),
+        timeout.promise,
       ]);
 
       // Success: reset failure count
+      timeout.clear();
       state.failures = 0;
       return result;
     } catch (error) {
+      timeout.clear();
       state.failures++;
       state.lastError = error instanceof Error ? error.message : String(error);
 
@@ -144,9 +147,10 @@ export class SafePluginRunner {
     pluginName: string,
     operation: string,
     timeoutMs: number,
-  ): Promise<T> {
-    return new Promise<T>((_, reject) => {
-      setTimeout(() => {
+  ): { promise: Promise<T>; clear: () => void } {
+    let timer: ReturnType<typeof setTimeout>;
+    const promise = new Promise<T>((_, reject) => {
+      timer = setTimeout(() => {
         reject(
           new Error(
             `Plugin "${pluginName}" timed out during ${operation} after ${timeoutMs}ms`,
@@ -154,5 +158,6 @@ export class SafePluginRunner {
         );
       }, timeoutMs);
     });
+    return { promise, clear: () => clearTimeout(timer) };
   }
 }

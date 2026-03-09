@@ -6,9 +6,14 @@ export const LightOnOffServer = OnOffServer({
   turnOn: (_value, agent) => {
     const entityId = agent.get(HomeAssistantEntityBehavior).entityId;
     const staged = consumePendingColorStaging(entityId);
+    if (entityId.startsWith("light.")) {
+      return {
+        action: "light.turn_on",
+        data: staged,
+      };
+    }
     return {
-      action: "light.turn_on",
-      data: staged,
+      action: "homeassistant.turn_on",
     };
   },
   turnOff: () => ({

@@ -71,7 +71,18 @@ export class BridgeEndpointManager extends Service {
         );
         return;
       }
-      const endpoint = new Endpoint(type, { id: `plugin_${device.id}` });
+      // Set PluginDeviceBehavior state and apply initial cluster config
+      const initialState: Record<string, object> = {
+        pluginDevice: { device, pluginName },
+      };
+      for (const cluster of device.clusters) {
+        initialState[cluster.clusterId] = cluster.attributes;
+      }
+      // biome-ignore lint/suspicious/noExplicitAny: EndpointType lacks .set() in its type but all factory results are MutableEndpoints
+      const configuredType = (type as any).set(initialState) as typeof type;
+      const endpoint = new Endpoint(configuredType, {
+        id: `plugin_${device.id}`,
+      });
       try {
         await this.root.add(endpoint);
         this.pluginEndpoints.set(device.id, endpoint);
@@ -102,6 +113,29 @@ export class BridgeEndpointManager extends Service {
         }
         this.pluginEndpoints.delete(deviceId);
       }
+    };
+
+    this.pluginManager.onDeviceStateUpdated = (
+      pluginName: string,
+      deviceId: string,
+      clusterId: string,
+      attributes: Record<string, unknown>,
+    ) => {
+      const endpoint = this.pluginEndpoints.get(deviceId);
+      if (!endpoint) return;
+      const behaviorType = endpoint.type.behaviors[clusterId];
+      if (!behaviorType) {
+        this.log.debug(
+          `Plugin "${pluginName}": cluster "${clusterId}" not found on device "${deviceId}"`,
+        );
+        return;
+      }
+      endpoint.setStateOf(behaviorType, attributes).catch((e) => {
+        this.log.warn(
+          `Plugin "${pluginName}": failed to update "${clusterId}" on "${deviceId}":`,
+          e,
+        );
+      });
     };
   }
 
