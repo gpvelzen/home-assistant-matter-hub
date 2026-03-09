@@ -437,6 +437,7 @@ Thank you to everyone who helps improve this project by reporting issues!
 | 💎 [@nicoodeimos](https://github.com/nicoodeimos) | 💎 [@ustari28](https://github.com/ustari28) | 💎 Markus Müller ([@Dingosworld](https://github.com/Dingosworld)) |
 | 💎 StefanS | 💎 Manny B. | 💎 Bonjon |
 | 💎 TobiR | 💎 Franz Huber | 💎 Michele Larese de Prata |
+| 💎 [@CNCB](https://github.com/CNCB) | 💎 [@pelican1997](https://github.com/pelican1997) | |
 
 🙏 *...and anonymous supporters who prefer not to be named.*
 
