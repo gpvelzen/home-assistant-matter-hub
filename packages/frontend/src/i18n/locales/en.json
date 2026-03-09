@@ -163,7 +163,20 @@
     "systemMetrics": "System Metrics",
     "heap": "Heap",
     "rss": "RSS",
-    "external": "External"
+    "external": "External",
+    "systemHealth": "System Health",
+    "fetchFailed": "Failed to fetch health status",
+    "connectionError": "Connection error",
+    "exportFailed": "Failed to export diagnostic data",
+    "restartFailed": "Failed to restart bridge",
+    "unableToLoad": "Unable to load health status",
+    "sortBy": "Sort by",
+    "created": "Created",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "connectedTo": "Connected to",
+    "autoRecovery": "Auto Recovery",
+    "recoveryAttempts": "Recovery attempts"
   },
   "mapping": {
     "title": "Entity Mappings",

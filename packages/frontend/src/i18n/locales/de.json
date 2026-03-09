@@ -163,7 +163,20 @@
     "systemMetrics": "Systemmetriken",
     "heap": "Heap",
     "rss": "RSS",
-    "external": "Extern"
+    "external": "Extern",
+    "systemHealth": "Systemstatus",
+    "fetchFailed": "Statusdaten konnten nicht abgerufen werden",
+    "connectionError": "Verbindungsfehler",
+    "exportFailed": "Diagnosedaten konnten nicht exportiert werden",
+    "restartFailed": "Bridge konnte nicht neu gestartet werden",
+    "unableToLoad": "Statusdaten konnten nicht geladen werden",
+    "sortBy": "Sortieren nach",
+    "created": "Erstellt",
+    "ascending": "Aufsteigend",
+    "descending": "Absteigend",
+    "connectedTo": "Verbunden mit",
+    "autoRecovery": "Auto-Wiederherstellung",
+    "recoveryAttempts": "Wiederherstellungsversuche"
   },
   "mapping": {
     "title": "Entity-Zuordnungen",
