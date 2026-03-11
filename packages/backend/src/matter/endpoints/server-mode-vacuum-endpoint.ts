@@ -216,6 +216,7 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
   }
 
   private lastState?: HomeAssistantEntityState;
+  private pendingMappedChange = false;
   private readonly flushUpdate: ReturnType<typeof debounce>;
 
   private constructor(
@@ -254,6 +255,7 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
     }
 
     if (mappedChanged) {
+      this.pendingMappedChange = true;
       logger.debug(
         `Mapped entity change detected for ${this.entityId}, forcing update`,
       );
@@ -274,8 +276,17 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
 
     try {
       const current = this.stateOf(HomeAssistantEntityBehavior).entity;
+      // When only a mapped entity changed (e.g. battery sensor), the primary
+      // entity state is structurally identical. matter.js uses isDeepEqual on
+      // setStateOf, so the entity$Changed event would never fire. Bump
+      // last_updated to force a structural difference.
+      let effectiveState = state;
+      if (this.pendingMappedChange) {
+        this.pendingMappedChange = false;
+        effectiveState = { ...state, last_updated: new Date().toISOString() };
+      }
       await this.setStateOf(HomeAssistantEntityBehavior, {
-        entity: { ...current, state },
+        entity: { ...current, state: effectiveState },
       });
     } catch (error) {
       if (
