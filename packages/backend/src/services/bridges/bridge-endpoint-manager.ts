@@ -325,13 +325,16 @@ export class BridgeEndpointManager extends Service {
     EntityIsolationService.unregisterIsolationCallback(this.bridgeId);
     EntityIsolationService.clearIsolatedEntities(this.bridgeId);
 
-    // Delete all endpoints to free memory
+    // Close all endpoints to free memory while preserving stored endpoint
+    // numbers. Using delete() here would erase the persisted endpoint numbers
+    // from matter.js storage, causing controllers to treat devices as new on
+    // the next restart (losing names, rooms, icons, and automations).
     const endpoints = this.root.parts.map((p) => p as EntityEndpoint);
     for (const endpoint of endpoints) {
       try {
-        await endpoint.delete();
+        await endpoint.close();
       } catch (e) {
-        this.log.warn(`Failed to delete endpoint during dispose:`, e);
+        this.log.warn(`Failed to close endpoint during dispose:`, e);
       }
     }
   }

@@ -65,12 +65,14 @@ export class ServerModeEndpointManager extends Service {
   override async dispose(): Promise<void> {
     this.stopObserving();
 
-    // Delete device endpoint to free memory
+    // Close device endpoint to free memory while preserving stored endpoint
+    // numbers. Using delete() here would erase persisted endpoint numbers,
+    // causing controllers to treat the device as new on the next restart.
     if (this.deviceEndpoint) {
       try {
-        await this.deviceEndpoint.delete();
+        await this.deviceEndpoint.close();
       } catch (e) {
-        this.log.warn(`Failed to delete device endpoint during dispose:`, e);
+        this.log.warn(`Failed to close device endpoint during dispose:`, e);
       }
       this.deviceEndpoint = undefined;
     }
