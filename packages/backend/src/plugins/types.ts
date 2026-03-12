@@ -43,9 +43,6 @@ export interface PluginDevice {
   /** Initial cluster configuration */
   clusters: PluginClusterConfig[];
 
-  /** Called when a Matter controller sends a command to this device */
-  onCommand?(clusterId: string, command: string, args: unknown): Promise<void>;
-
   /** Called when a Matter controller writes an attribute on this device */
   onAttributeWrite?(
     clusterId: string,

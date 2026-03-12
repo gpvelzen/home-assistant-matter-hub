@@ -9,10 +9,13 @@ const logger = Logger.get("PluginStorage");
  * File-based persistent storage for a plugin instance.
  * Each plugin gets its own JSON file in the storage directory.
  */
+const SAVE_DEBOUNCE_MS = 500;
+
 export class FilePluginStorage implements PluginStorage {
   private data: Record<string, unknown> = {};
   private dirty = false;
   private readonly filePath: string;
+  private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(storageDir: string, pluginName: string) {
     const safePluginName = pluginName.replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -28,13 +31,13 @@ export class FilePluginStorage implements PluginStorage {
   async set<T>(key: string, value: T): Promise<void> {
     this.data[key] = value;
     this.dirty = true;
-    this.save();
+    this.scheduleSave();
   }
 
   async delete(key: string): Promise<void> {
     delete this.data[key];
     this.dirty = true;
-    this.save();
+    this.scheduleSave();
   }
 
   async keys(): Promise<string[]> {
@@ -53,8 +56,17 @@ export class FilePluginStorage implements PluginStorage {
     }
   }
 
+  private scheduleSave(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.save(), SAVE_DEBOUNCE_MS);
+  }
+
   private save(): void {
     if (!this.dirty) return;
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = undefined;
+    }
     try {
       const dir = path.dirname(this.filePath);
       if (!fs.existsSync(dir)) {
@@ -65,5 +77,9 @@ export class FilePluginStorage implements PluginStorage {
     } catch (e) {
       logger.warn(`Failed to save plugin storage to ${this.filePath}:`, e);
     }
+  }
+
+  flush(): void {
+    this.save();
   }
 }
