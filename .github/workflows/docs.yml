@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs/**'
+      - 'docs-site/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -31,22 +31,18 @@ jobs:
         with:
           node-version: 22.x
 
-      - name: Install MyST Markdown
-        run: npm install -g mystmd
+      - name: Install dependencies
+        working-directory: docs-site
+        run: npm ci
 
-      - name: Build HTML Assets
-        env:
-          BASE_URL: /home-assistant-matter-hub
-        working-directory: docs
-        run: myst build --html
-
-      - name: Add .nojekyll
-        run: touch docs/_build/html/.nojekyll
+      - name: Build Docusaurus
+        working-directory: docs-site
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './docs/_build/html'
+          path: './docs-site/build'
 
   deploy:
     name: "Deploy to GitHub Pages"
