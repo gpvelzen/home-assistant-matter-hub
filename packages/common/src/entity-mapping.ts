@@ -6,12 +6,10 @@ export type MatterDeviceType =
   | "basic_video_player"
   | "battery_storage"
   | "carbon_monoxide_sensor"
-  | "color_dimmer_switch"
   | "color_temperature_light"
   | "contact_sensor"
   | "dimmable_light"
   | "dimmable_plugin_unit"
-  | "dimmer_switch"
   | "door_lock"
   | "electrical_sensor"
   | "extended_color_light"
@@ -140,6 +138,20 @@ export interface EntityMappingConfig {
    * Value is the Matter ModeTag.
    */
   readonly customFanSpeedTags?: Record<string, number>;
+  /**
+   * Optional: Valetudo MQTT identifier for segment cleaning.
+   * HA lowercases entity IDs, but the MQTT topic needs the exact identifier
+   * shown in Valetudo under Connectivity → MQTT (e.g., "GentleFinishedSpider").
+   * If not set, the identifier is extracted from the entity ID (all lowercase).
+   */
+  readonly valetudoIdentifier?: string;
+  /**
+   * Auto-populated at runtime when the vacuum supports HA 2026.3 CLEAN_AREA.
+   * Maps HA areas (from the user's segment-to-area mapping in HA) to Matter
+   * ServiceArea area IDs. When set, vacuum.clean_area is used instead of
+   * vendor-specific room cleaning commands.
+   */
+  readonly cleanAreaRooms?: import("./domains/vacuum.js").CleanAreaRoom[];
 }
 
 export interface CustomServiceArea {
@@ -172,6 +184,7 @@ export interface EntityMappingRequest {
   readonly mopIntensityEntity?: string;
   readonly customServiceAreas?: CustomServiceArea[];
   readonly customFanSpeedTags?: Record<string, number>;
+  readonly valetudoIdentifier?: string;
 }
 
 export interface EntityMappingResponse {
@@ -185,12 +198,10 @@ export const matterDeviceTypeLabels: Record<MatterDeviceType, string> = {
   basic_video_player: "Basic Video Player (TV)",
   battery_storage: "Battery Sensor",
   carbon_monoxide_sensor: "Carbon Monoxide (CO) Sensor",
-  color_dimmer_switch: "Color Dimmer Switch",
   color_temperature_light: "Color Temperature Light",
   contact_sensor: "Contact Sensor",
   dimmable_light: "Dimmable Light",
   dimmable_plugin_unit: "Dimmable Plug-in Unit",
-  dimmer_switch: "Dimmer Switch",
   door_lock: "Door Lock",
   electrical_sensor: "Electrical Sensor (Power/Energy/Voltage/Current)",
   extended_color_light: "Extended Color Light",

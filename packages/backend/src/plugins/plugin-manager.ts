@@ -20,11 +20,15 @@ const logger = Logger.get("PluginManager");
 
 export const PLUGIN_API_VERSION = 1;
 
+const MAX_PLUGIN_DEVICE_ID_LENGTH = 100;
+
 function validatePluginDevice(device: unknown): string | undefined {
   if (!device || typeof device !== "object") return "device must be an object";
   const d = device as Record<string, unknown>;
   if (!d.id || typeof d.id !== "string")
     return "device.id must be a non-empty string";
+  if ((d.id as string).length > MAX_PLUGIN_DEVICE_ID_LENGTH)
+    return `device.id too long (${(d.id as string).length} chars, max ${MAX_PLUGIN_DEVICE_ID_LENGTH})`;
   if (!d.name || typeof d.name !== "string")
     return "device.name must be a non-empty string";
   if (!d.deviceType || typeof d.deviceType !== "string")
@@ -115,7 +119,12 @@ export class PluginManager {
       if (!fs.existsSync(pkgJsonPath)) {
         throw new Error(`Plugin at ${packagePath} has no package.json`);
       }
-      let manifest: { name?: string; version?: string; main?: string };
+      let manifest: {
+        name?: string;
+        version?: string;
+        main?: string;
+        hamhPluginApiVersion?: number;
+      };
       try {
         manifest = JSON.parse(fs.readFileSync(pkgJsonPath, "utf-8"));
       } catch {
@@ -126,6 +135,14 @@ export class PluginManager {
       }
       if (!manifest.main || typeof manifest.main !== "string") {
         throw new Error(`Plugin at ${packagePath} package.json missing "main"`);
+      }
+      if (
+        manifest.hamhPluginApiVersion != null &&
+        manifest.hamhPluginApiVersion !== PLUGIN_API_VERSION
+      ) {
+        logger.warn(
+          `Plugin "${manifest.name}" declares API version ${manifest.hamhPluginApiVersion}, current is ${PLUGIN_API_VERSION}. It may not work correctly.`,
+        );
       }
 
       const module = await this.runner.run(
@@ -290,6 +307,10 @@ export class PluginManager {
         await this.runner.run(name, "onShutdown", () =>
           instance.plugin.onShutdown!(reason),
         );
+      }
+      const storage = instance.context.storage;
+      if (storage instanceof FilePluginStorage) {
+        storage.flush();
       }
       instance.started = false;
       logger.info(`Plugin "${name}" shut down`);

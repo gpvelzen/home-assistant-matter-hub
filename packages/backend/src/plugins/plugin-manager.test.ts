@@ -149,6 +149,52 @@ describe("PluginManager", () => {
       expect(registeredDevices).toHaveLength(0);
     });
 
+    it("should preserve onAttributeWrite callback on registered device", async () => {
+      const pm = new PluginManager("bridge-1", storageDir);
+      const registeredDevices: Array<{ name: string; device: PluginDevice }> =
+        [];
+      pm.onDeviceRegistered = async (name, device) => {
+        registeredDevices.push({ name, device });
+      };
+
+      const writeLog: Array<{
+        clusterId: string;
+        attribute: string;
+        value: unknown;
+      }> = [];
+
+      await pm.registerBuiltIn(
+        createMockPlugin({
+          onStart: async (ctx: PluginContext) => {
+            await ctx.registerDevice({
+              id: "dev-write",
+              name: "Writable Device",
+              deviceType: "on_off_light",
+              clusters: [{ clusterId: "onOff", attributes: { onOff: false } }],
+              onAttributeWrite: async (clusterId, attribute, value) => {
+                writeLog.push({ clusterId, attribute, value });
+              },
+            });
+          },
+        }),
+      );
+
+      await pm.startAll();
+
+      expect(registeredDevices).toHaveLength(1);
+      const device = registeredDevices[0].device;
+      expect(device.onAttributeWrite).toBeDefined();
+
+      // Simulate what BridgeEndpointManager does when a controller writes
+      await device.onAttributeWrite!("onOff", "onOff", true);
+      expect(writeLog).toHaveLength(1);
+      expect(writeLog[0]).toEqual({
+        clusterId: "onOff",
+        attribute: "onOff",
+        value: true,
+      });
+    });
+
     it("should reject device with missing name", async () => {
       const pm = new PluginManager("bridge-1", storageDir);
       const registeredDevices: PluginDevice[] = [];

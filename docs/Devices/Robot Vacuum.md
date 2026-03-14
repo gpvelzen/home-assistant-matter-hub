@@ -257,19 +257,35 @@ The Matter spec only allows a single `currentMode` value. When in "Vacuum & Mop"
 
 ## Room Selection
 
-Room selection is supported through two mechanisms:
+Room selection is supported through multiple mechanisms, with automatic priority:
 
-### 1. Service Area Cluster (Apple Home)
+### 1. Home Assistant Area Mapping (HA 2026.3+) — Recommended
 
-Apple Home uses the Matter 1.4 **Service Area** cluster for room selection. This is automatically enabled when your vacuum exposes room data. Requires **Server Mode**.
+Starting with Home Assistant 2026.3, vacuums that support the **Clean Area** feature can map their internal segments to your existing HA areas. When this mapping is configured in HA, HAMH automatically uses `vacuum.clean_area` for room cleaning — no vendor-specific configuration needed.
 
-### 2. RVC Run Mode (Google Home, Alexa, etc.)
+**How it works:**
+1. Your vacuum integration reports support for `CLEAN_AREA` (supported_features flag `16384`)
+2. You map vacuum segments to HA areas in **Settings → Devices → [Your Vacuum] → Configure**
+3. HAMH automatically detects the mapping and creates Matter Service Areas from your HA areas
+4. Room cleaning uses the standard `vacuum.clean_area` action instead of vendor-specific commands
+
+This is the **preferred method** when available, as it works with any vacuum integration that supports `CLEAN_AREA` (currently Ecovacs, Roborock, and Matter-based vacuums in HA 2026.3+).
+
+:::{note}
+When `CLEAN_AREA` mapping is detected, it takes priority over all vendor-specific room detection methods (Valetudo segments, Roborock `get_maps`, Dreame rooms, etc.). The vendor-specific methods remain as fallback for vacuums without `CLEAN_AREA` support.
+:::
+
+### 2. Service Area Cluster (Apple Home)
+
+Apple Home uses the Matter 1.4 **Service Area** cluster for room selection. This is automatically enabled when your vacuum exposes room data (via Clean Area mapping, vendor attributes, or manual configuration). Requires **Server Mode**.
+
+### 3. RVC Run Mode (Google Home, Alexa, etc.)
 
 Custom cleaning modes are created for each room, e.g., "Clean Kitchen", "Clean Living Room". These appear as selectable modes in compatible controllers.
 
-### Room Data Requirements
+### Room Data Requirements (Vendor-Specific Fallback)
 
-For room selection to work, your vacuum integration must expose room data as entity attributes. Supported formats:
+When `CLEAN_AREA` is not available, room selection falls back to vendor-specific room data from entity attributes. Supported formats:
 
 ```yaml
 # Format 1: Direct object (Roborock)
@@ -299,10 +315,10 @@ rooms:
 
 | Integration | Rooms | Cleaning Modes | Mop Intensity | Notes |
 |-------------|-------|----------------|---------------|-------|
-| **Roborock (Official)** | Auto via `roborock.get_maps` | Via helper (see above) | `select.*_mop_intensity` | Automatic room detection since v2.0.25 |
+| **Roborock (Official)** | Auto via CLEAN_AREA (HA 2026.3+) or `roborock.get_maps` | Via helper (see above) | `select.*_mop_intensity` | CLEAN_AREA preferred when configured |
 | **Roborock (Xiaomi Miot)** | `rooms` or `segments` attribute | — | — | Native room support |
 | **Dreame** | `rooms` attribute | Auto-detected | Auto-detected | Full auto-detection |
-| **Ecovacs** | `rooms` attribute | Via `cleaningModeEntity` | Auto-detected | Set cleaning mode in Entity Mapping |
+| **Ecovacs** | Auto via CLEAN_AREA (HA 2026.3+) or `rooms` attribute | Via `cleaningModeEntity` | Auto-detected | CLEAN_AREA preferred when configured |
 | **Valetudo** | `segments` attribute | Auto-detected | — | Native support since v2.0.27 via `mqtt.publish` segment_cleanup ([#205](https://github.com/RiDDiX/home-assistant-matter-hub/issues/205)) |
 | **Xiaomi** | `rooms` attribute | — | — | May require custom integration |
 | **iRobot Roomba** | — | — | — | Basic start/stop, use `batteryEntity` mapping |

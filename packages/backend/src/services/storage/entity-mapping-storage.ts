@@ -128,6 +128,7 @@ export class EntityMappingStorage extends Service {
         Object.keys(request.customFanSpeedTags).length > 0
           ? request.customFanSpeedTags
           : undefined,
+      valetudoIdentifier: request.valetudoIdentifier?.trim() || undefined,
     };
 
     if (
@@ -147,7 +148,8 @@ export class EntityMappingStorage extends Service {
       !config.mopIntensityEntity &&
       (!config.customServiceAreas || config.customServiceAreas.length === 0) &&
       (!config.customFanSpeedTags ||
-        Object.keys(config.customFanSpeedTags).length === 0)
+        Object.keys(config.customFanSpeedTags).length === 0) &&
+      !config.valetudoIdentifier
     ) {
       bridgeMap.delete(request.entityId);
     } else {

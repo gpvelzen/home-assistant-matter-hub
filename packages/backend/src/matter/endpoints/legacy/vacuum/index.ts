@@ -17,8 +17,12 @@ import {
   resolveMopIntensityList,
 } from "./behaviors/vacuum-rvc-clean-mode-server.js";
 import { VacuumRvcOperationalStateServer } from "./behaviors/vacuum-rvc-operational-state-server.js";
-import { createVacuumRvcRunModeServer } from "./behaviors/vacuum-rvc-run-mode-server.js";
 import {
+  createCleanAreaRvcRunModeServer,
+  createVacuumRvcRunModeServer,
+} from "./behaviors/vacuum-rvc-run-mode-server.js";
+import {
+  createCleanAreaServiceAreaServer,
   createCustomServiceAreaServer,
   createDefaultServiceAreaServer,
   createVacuumServiceAreaServer,
@@ -54,12 +58,15 @@ export function VacuumDevice(
   // Add RvcRunModeServer with initial supportedModes (including room modes if available).
   // Custom service areas are passed so they get registered as room modes —
   // Apple Home uses RvcRunMode (not ServiceArea.selectAreas) for zone selection.
+  const cleanAreaRooms = homeAssistantEntity.mapping?.cleanAreaRooms;
   let device = VacuumEndpointType.with(
-    createVacuumRvcRunModeServer(
-      attributes,
-      false,
-      customAreas && customAreas.length > 0 ? customAreas : undefined,
-    ),
+    cleanAreaRooms && cleanAreaRooms.length > 0
+      ? createCleanAreaRvcRunModeServer(cleanAreaRooms)
+      : createVacuumRvcRunModeServer(
+          attributes,
+          false,
+          customAreas && customAreas.length > 0 ? customAreas : undefined,
+        ),
   ).set({ homeAssistantEntity });
 
   // OnOff is NOT part of the RoboticVacuumCleaner device type spec.
@@ -78,9 +85,14 @@ export function VacuumDevice(
   const roomEntities = homeAssistantEntity.mapping?.roomEntities;
   const rooms = parseVacuumRooms(attributes);
   logger.info(
-    `${entityId}: customAreas=${customAreas?.length ?? 0}, roomEntities=${JSON.stringify(roomEntities ?? [])}, parsedRooms=${rooms.length}`,
+    `${entityId}: customAreas=${customAreas?.length ?? 0}, roomEntities=${JSON.stringify(roomEntities ?? [])}, parsedRooms=${rooms.length}, cleanAreaRooms=${cleanAreaRooms?.length ?? 0}`,
   );
-  if (customAreas && customAreas.length > 0) {
+  if (cleanAreaRooms && cleanAreaRooms.length > 0) {
+    logger.info(
+      `${entityId}: Adding ServiceArea (${cleanAreaRooms.length} HA areas via CLEAN_AREA)`,
+    );
+    device = device.with(createCleanAreaServiceAreaServer(cleanAreaRooms));
+  } else if (customAreas && customAreas.length > 0) {
     logger.info(
       `${entityId}: Adding ServiceArea (${customAreas.length} custom areas)`,
     );

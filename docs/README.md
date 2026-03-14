@@ -53,9 +53,23 @@ Home, ...) are not placed in the same network segment. Please make sure to revie
 ## What's New
 
 <details>
-<summary><strong>📦 Stable (v2.0.34) - Current</strong></summary>
+<summary><strong>📦 Stable (v2.0.35) - Current</strong></summary>
 
-**New in v2.0.34:**
+**New in v2.0.35:**
+
+| Feature | Description |
+|---------|-------------|
+| **🏠 HA 2026.3 Clean Area Support** | Native support for the new `vacuum.clean_area` action |
+| **🤖 Valetudo Identifier Mapping** | Custom `valetudoIdentifier` for MQTT topic case mismatches, fix segment cleaning sending all rooms |
+| **🔌 Plugin System Hardening** | Validation, API version check, tgz upload/local install, expanded device types, bridge vendorId |
+| **🔍 Registry Fingerprint Fix** | Include device labels, area, name and model in fingerprint ([#243](https://github.com/RiDDiX/home-assistant-matter-hub/issues/243), [#256](https://github.com/RiDDiX/home-assistant-matter-hub/issues/256)) |
+| **🔋 Roomba Battery Fix** | Handle string battery attributes for Rest980/Roomba vacuums ([#255](https://github.com/RiDDiX/home-assistant-matter-hub/issues/255)) |
+| **📡 Contact Sensor Fix** | Correct Open/Closed display in HAMH UI ([#254](https://github.com/RiDDiX/home-assistant-matter-hub/issues/254)) |
+| **⚡ Script Momentary Fix** | Make scripts momentary and fix autoReset optimistic guard conflict ([#253](https://github.com/RiDDiX/home-assistant-matter-hub/issues/253)) |
+| **📊 Mapped Entity Updates Fix** | Bypass matter.js isDeepEqual for mapped entity updates ([#237](https://github.com/RiDDiX/home-assistant-matter-hub/issues/237)) |
+| **📖 Docusaurus Docs** | New documentation site with improved search and navigation |
+
+**Previously in v2.0.34:**
 
 | Feature | Description |
 |---------|-------------|
@@ -63,24 +77,20 @@ Home, ...) are not placed in the same network segment. Please make sure to revie
 | **🔋 Vacuum Battery Auto-Map** | Always auto-map battery entity for vacuum endpoints ([#237](https://github.com/RiDDiX/home-assistant-matter-hub/issues/237)) |
 | **⚙️ Deprecated Feature Flags Fix** | Allow deprecated feature flags in stored bridge data to pass validation |
 
-**Previously in v2.0.33:**
-
-| Feature | Description |
-|---------|-------------|
-| **🔢 Endpoint Number Preservation** | Preserve endpoint numbers across restarts ([#247](https://github.com/RiDDiX/home-assistant-matter-hub/issues/247)) |
-| **🔋 Binary Sensor Battery Auto-Map** | Support binary_sensor battery entities in auto-mapping |
-
 </details>
 
 <details>
 <summary><strong>🧪 Alpha (v2.1.0-alpha.x)</strong></summary>
 
-**Alpha is currently in sync with Stable (v2.0.34).** All alpha features have been promoted to stable. New alpha features will appear here as development continues. See the [Alpha Features Guide](./Guides/Alpha%20Features.md) for installation instructions.
+**Alpha is currently in sync with Stable (v2.0.35).** All alpha features have been promoted to stable. New alpha features will appear here as development continues. See the [Alpha Features Guide](./Guides/Alpha%20Features.md) for installation instructions.
 
 </details>
 
 <details>
 <summary><strong>📋 Previous Versions</strong></summary>
+
+### v2.0.34
+Automatic Backup, Vacuum Battery Auto-Map, Deprecated Feature Flags Fix
 
 ### v2.0.33
 Endpoint Number Preservation, Binary Sensor Battery Auto-Map

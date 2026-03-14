@@ -33,6 +33,7 @@ function configToProfileEntry(
     mopIntensityEntity: config.mopIntensityEntity,
     customServiceAreas: config.customServiceAreas,
     customFanSpeedTags: config.customFanSpeedTags,
+    valetudoIdentifier: config.valetudoIdentifier,
   };
 }
 
@@ -187,6 +188,7 @@ export function mappingProfileApi(
           mopIntensityEntity: entry.mopIntensityEntity,
           customServiceAreas: entry.customServiceAreas,
           customFanSpeedTags: entry.customFanSpeedTags,
+          valetudoIdentifier: entry.valetudoIdentifier,
         });
         applied++;
       } catch (e) {

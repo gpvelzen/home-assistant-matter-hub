@@ -59,9 +59,16 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
           registry.markBatteryEntityUsed(batteryEntityId);
           logger.info(`${entityId}: Auto-assigned battery ${batteryEntityId}`);
         } else {
-          logger.warn(
-            `${entityId}: No battery entity found for device ${entity.device_id}`,
-          );
+          const attrs = state.attributes as VacuumDeviceAttributes;
+          if (attrs.battery_level != null || attrs.battery != null) {
+            logger.info(
+              `${entityId}: No battery entity found, using battery attribute from vacuum state`,
+            );
+          } else {
+            logger.warn(
+              `${entityId}: No battery entity found for device ${entity.device_id}`,
+            );
+          }
         }
       }
 
@@ -109,9 +116,34 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
         );
       }
 
-      // Auto-detect rooms when no rooms in attributes
+      // HA 2026.3 CLEAN_AREA: resolve HA area mapping before vendor-specific room detection.
+      // When CLEAN_AREA is supported and area_mapping is configured, this takes priority
+      // over all vendor-specific room detection methods.
+      const supportedFeatures =
+        (state.attributes as VacuumDeviceAttributes).supported_features ?? 0;
+      const cleanAreaRooms = await registry.resolveCleanAreaRooms(
+        entityId,
+        supportedFeatures,
+      );
+      if (cleanAreaRooms.length > 0) {
+        effectiveMapping = {
+          ...effectiveMapping,
+          entityId: effectiveMapping?.entityId ?? entityId,
+          cleanAreaRooms,
+        };
+        logger.info(
+          `${entityId}: Using ${cleanAreaRooms.length} HA areas via CLEAN_AREA`,
+        );
+      }
+
+      // Auto-detect rooms when no rooms in attributes and no CLEAN_AREA mapping
       const vacAttrs = state.attributes as VacuumDeviceAttributes;
-      if (!vacAttrs.rooms && !vacAttrs.segments && !vacAttrs.room_mapping) {
+      if (
+        cleanAreaRooms.length === 0 &&
+        !vacAttrs.rooms &&
+        !vacAttrs.segments &&
+        !vacAttrs.room_mapping
+      ) {
         // Try Valetudo map segments sensor (sensor.*_map_segments on same device)
         const valetudoRooms = registry.findValetudoMapSegments(
           entity.device_id,
@@ -216,6 +248,7 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
   }
 
   private lastState?: HomeAssistantEntityState;
+  private pendingMappedChange = false;
   private readonly flushUpdate: ReturnType<typeof debounce>;
 
   private constructor(
@@ -254,6 +287,7 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
     }
 
     if (mappedChanged) {
+      this.pendingMappedChange = true;
       logger.debug(
         `Mapped entity change detected for ${this.entityId}, forcing update`,
       );
@@ -274,8 +308,17 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
 
     try {
       const current = this.stateOf(HomeAssistantEntityBehavior).entity;
+      // When only a mapped entity changed (e.g. battery sensor), the primary
+      // entity state is structurally identical. matter.js uses isDeepEqual on
+      // setStateOf, so the entity$Changed event would never fire. Bump
+      // last_updated to force a structural difference.
+      let effectiveState = state;
+      if (this.pendingMappedChange) {
+        this.pendingMappedChange = false;
+        effectiveState = { ...state, last_updated: new Date().toISOString() };
+      }
       await this.setStateOf(HomeAssistantEntityBehavior, {
-        entity: { ...current, state },
+        entity: { ...current, state: effectiveState },
       });
     } catch (error) {
       if (

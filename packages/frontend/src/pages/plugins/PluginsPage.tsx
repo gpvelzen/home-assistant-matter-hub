@@ -1,10 +1,12 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExtensionIcon from "@mui/icons-material/Extension";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import PowerIcon from "@mui/icons-material/Power";
 import PowerOffIcon from "@mui/icons-material/PowerOff";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -23,10 +25,12 @@ import ListItem from "@mui/material/ListItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface PluginDevice {
   id: string;
@@ -78,8 +82,12 @@ export const PluginsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [installOpen, setInstallOpen] = useState(false);
+  const [installTab, setInstallTab] = useState(0);
   const [packageName, setPackageName] = useState("");
+  const [localPath, setLocalPath] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [installing, setInstalling] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -112,6 +120,53 @@ export const PluginsPage = () => {
         body: JSON.stringify({ packageName: packageName.trim() }),
       });
       setPackageName("");
+      setInstallOpen(false);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    setInstalling(true);
+    try {
+      const buf = await selectedFile.arrayBuffer();
+      const res = await fetch("api/plugins/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/octet-stream" },
+        body: buf,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          (data as { error?: string }).error ??
+            `${res.status} ${res.statusText}`,
+        );
+      }
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setInstallOpen(false);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  const handleLocalInstall = async () => {
+    if (!localPath.trim()) return;
+    setInstalling(true);
+    try {
+      await fetchJson("api/plugins/install-local", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: localPath.trim() }),
+      });
+      setLocalPath("");
       setInstallOpen(false);
       await refresh();
     } catch (e) {
@@ -382,35 +437,120 @@ export const PluginsPage = () => {
       >
         <DialogTitle>Install Plugin</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="npm package name"
-            placeholder="e.g. hamh-plugin-example"
-            fullWidth
-            value={packageName}
-            onChange={(e) => setPackageName(e.target.value)}
-            disabled={installing}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleInstall();
-            }}
-          />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            The plugin will be installed via npm. After installation, restart
-            the bridge to load the plugin.
-          </Typography>
+          <Tabs
+            value={installTab}
+            onChange={(_e, v: number) => setInstallTab(v)}
+            sx={{ mb: 2 }}
+          >
+            <Tab label="npm" />
+            <Tab label="Upload .tgz" />
+            <Tab label="Local Path" />
+          </Tabs>
+
+          {installTab === 0 && (
+            <>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="npm package name"
+                placeholder="e.g. hamh-plugin-example"
+                fullWidth
+                value={packageName}
+                onChange={(e) => setPackageName(e.target.value)}
+                disabled={installing}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleInstall();
+                }}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                The plugin will be installed via npm. After installation,
+                restart the bridge to load the plugin.
+              </Typography>
+            </>
+          )}
+
+          {installTab === 1 && (
+            <>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<UploadFileIcon />}
+                fullWidth
+                sx={{ mt: 1 }}
+                disabled={installing}
+              >
+                {selectedFile ? selectedFile.name : "Choose .tgz file"}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".tgz,application/gzip"
+                  hidden
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                />
+              </Button>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Upload a packaged plugin (.tgz). Restart the bridge after
+                installation.
+              </Typography>
+            </>
+          )}
+
+          {installTab === 2 && (
+            <>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Absolute path to plugin folder"
+                placeholder="/path/to/your/plugin"
+                fullWidth
+                value={localPath}
+                onChange={(e) => setLocalPath(e.target.value)}
+                disabled={installing}
+                InputProps={{
+                  startAdornment: <FolderOpenIcon sx={{ mr: 1 }} />,
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleLocalInstall();
+                }}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Link a local plugin directory (creates a symlink). Useful for
+                development. Restart the bridge after linking.
+              </Typography>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setInstallOpen(false)} disabled={installing}>
             Cancel
           </Button>
-          <Button
-            onClick={handleInstall}
-            variant="contained"
-            disabled={installing || !packageName.trim()}
-          >
-            {installing ? <CircularProgress size={20} /> : "Install"}
-          </Button>
+          {installTab === 0 && (
+            <Button
+              onClick={handleInstall}
+              variant="contained"
+              disabled={installing || !packageName.trim()}
+            >
+              {installing ? <CircularProgress size={20} /> : "Install"}
+            </Button>
+          )}
+          {installTab === 1 && (
+            <Button
+              onClick={handleUpload}
+              variant="contained"
+              disabled={installing || !selectedFile}
+            >
+              {installing ? <CircularProgress size={20} /> : "Upload"}
+            </Button>
+          )}
+          {installTab === 2 && (
+            <Button
+              onClick={handleLocalInstall}
+              variant="contained"
+              disabled={installing || !localPath.trim()}
+            >
+              {installing ? <CircularProgress size={20} /> : "Link"}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

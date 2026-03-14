@@ -250,9 +250,32 @@ export class LegacyEndpoint extends EntityEndpoint {
           );
         }
 
-        // Auto-detect rooms when no rooms in attributes
+        // HA 2026.3 CLEAN_AREA: resolve HA area mapping before vendor-specific room detection
+        const supportedFeatures =
+          (state.attributes as VacuumDeviceAttributes).supported_features ?? 0;
+        const cleanAreaRooms = await registry.resolveCleanAreaRooms(
+          entityId,
+          supportedFeatures,
+        );
+        if (cleanAreaRooms.length > 0) {
+          effectiveMapping = {
+            ...effectiveMapping,
+            entityId: effectiveMapping?.entityId ?? entityId,
+            cleanAreaRooms,
+          };
+          logger.debug(
+            `Using ${cleanAreaRooms.length} HA areas via CLEAN_AREA for ${entityId}`,
+          );
+        }
+
+        // Auto-detect rooms when no rooms in attributes and no CLEAN_AREA mapping
         const vacAttrs = state.attributes as VacuumDeviceAttributes;
-        if (!vacAttrs.rooms && !vacAttrs.segments && !vacAttrs.room_mapping) {
+        if (
+          cleanAreaRooms.length === 0 &&
+          !vacAttrs.rooms &&
+          !vacAttrs.segments &&
+          !vacAttrs.room_mapping
+        ) {
           // Try Valetudo map segments sensor first
           const valetudoRooms = registry.findValetudoMapSegments(
             entity.device_id,
@@ -422,6 +445,7 @@ export class LegacyEndpoint extends EntityEndpoint {
   }
 
   private lastState?: HomeAssistantEntityState;
+  private pendingMappedChange = false;
   private readonly flushUpdate: ReturnType<typeof debounce>;
 
   override async delete() {
@@ -448,6 +472,7 @@ export class LegacyEndpoint extends EntityEndpoint {
     }
 
     if (mappedChanged) {
+      this.pendingMappedChange = true;
       logger.debug(
         `Mapped entity change detected for ${this.entityId}, forcing update`,
       );
@@ -473,8 +498,17 @@ export class LegacyEndpoint extends EntityEndpoint {
 
     try {
       const current = this.stateOf(HomeAssistantEntityBehavior).entity;
+      // When only a mapped entity changed (e.g. battery sensor), the primary
+      // entity state is structurally identical. matter.js uses isDeepEqual on
+      // setStateOf, so the entity$Changed event would never fire. Bump
+      // last_updated to force a structural difference.
+      let effectiveState = state;
+      if (this.pendingMappedChange) {
+        this.pendingMappedChange = false;
+        effectiveState = { ...state, last_updated: new Date().toISOString() };
+      }
       await this.setStateOf(HomeAssistantEntityBehavior, {
-        entity: { ...current, state },
+        entity: { ...current, state: effectiveState },
       });
     } catch (error) {
       const errorMessage =

@@ -74,14 +74,14 @@ export class HomeAssistantRegistry extends Service {
     this.disableAutoRefresh();
   }
 
-  enableAutoRefresh(onRefresh: () => void) {
+  enableAutoRefresh(onRefresh: () => Promise<void> | void) {
     this.disableAutoRefresh();
 
     this.autoRefresh = setInterval(async () => {
       try {
         const changed = await this.reload();
         if (changed) {
-          onRefresh();
+          await onRefresh();
         }
       } catch (e) {
         logger.warn("Failed to refresh registry, will retry next interval:", e);
@@ -136,11 +136,17 @@ export class HomeAssistantRegistry extends Service {
     const hash = createHash("md5");
     for (const e of entityRegistry) {
       hash.update(
-        `${e.entity_id}\0${e.device_id ?? ""}\0${e.disabled_by ?? ""}\0${e.hidden_by ?? ""}\n`,
+        `${e.entity_id}\0${e.device_id ?? ""}\0${e.disabled_by ?? ""}\0${e.hidden_by ?? ""}\0${e.area_id ?? ""}\0${(e.labels ?? []).join(",")}\0${e.platform ?? ""}\0${e.entity_category ?? ""}\n`,
       );
     }
-    for (const s of statesList) hash.update(`${s.entity_id}\n`);
-    for (const d of deviceRegistry) hash.update(`${d.id}\n`);
+    for (const s of statesList) {
+      hash.update(`${s.entity_id}\0${s.attributes?.device_class ?? ""}\n`);
+    }
+    for (const d of deviceRegistry) {
+      hash.update(
+        `${d.id}\0${(d.labels ?? []).join(",")}\0${d.area_id ?? ""}\0${d.name_by_user ?? ""}\0${d.name ?? ""}\0${d.model ?? ""}\n`,
+      );
+    }
     for (const l of labels) hash.update(`${l.label_id}\n`);
     for (const a of areas) hash.update(`${a.area_id}\0${a.name}\n`);
     const fingerprint = hash.digest("hex");

@@ -46,6 +46,7 @@ export function entityMappingApi(
       mopIntensityEntity: body.mopIntensityEntity,
       customServiceAreas: body.customServiceAreas,
       customFanSpeedTags: body.customFanSpeedTags,
+      valetudoIdentifier: body.valetudoIdentifier,
     };
 
     const config = await mappingStorage.setMapping(request);

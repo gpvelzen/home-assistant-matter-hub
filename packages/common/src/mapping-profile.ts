@@ -24,6 +24,7 @@ export interface MappingProfileEntry {
   readonly mopIntensityEntity?: string;
   readonly customServiceAreas?: CustomServiceArea[];
   readonly customFanSpeedTags?: Record<string, number>;
+  readonly valetudoIdentifier?: string;
 }
 
 export interface MappingProfile {

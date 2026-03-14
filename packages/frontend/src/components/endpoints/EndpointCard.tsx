@@ -465,8 +465,8 @@ export const EndpointCard = ({
     // Boolean state (contact sensors, etc.)
     if (boolean?.stateValue !== undefined && onOff?.onOff === undefined) {
       chips.push({
-        label: boolean.stateValue ? "Open" : "Closed",
-        color: boolean.stateValue ? "warning" : "success",
+        label: boolean.stateValue ? "Closed" : "Open",
+        color: boolean.stateValue ? "success" : "warning",
       });
     }
 

@@ -14,8 +14,10 @@ import {
   AlarmOnOffDevice,
 } from "./alarm-control-panel/index.js";
 import { AutomationDevice } from "./automation/index.js";
+import { ContactSensorType } from "./binary-sensor/contact-sensor.js";
 import { BinarySensorDevice } from "./binary-sensor/index.js";
 import { MotionSensorType } from "./binary-sensor/motion-sensor.js";
+import { OccupancySensorType } from "./binary-sensor/occupancy-sensor.js";
 import { RainSensorType } from "./binary-sensor/rain-sensor.js";
 import { SmokeAlarmType } from "./binary-sensor/smoke-co-alarm.js";
 import { WaterFreezeDetectorType } from "./binary-sensor/water-freeze-detector.js";
@@ -56,6 +58,7 @@ import { RadonSensorType } from "./sensor/devices/radon-sensor.js";
 import { TemperatureSensorType } from "./sensor/devices/temperature-sensor.js";
 import { TvocSensorType } from "./sensor/devices/tvoc-sensor.js";
 import { SensorDevice } from "./sensor/index.js";
+import { DimmablePlugInUnitType } from "./switch/dimmable-plugin-unit.js";
 import { SwitchDevice } from "./switch/index.js";
 import { VacuumDevice } from "./vacuum/index.js";
 import { ValveDevice } from "./valve/index.js";
@@ -215,6 +218,10 @@ const matterDeviceTypeFactories: Partial<
     }
     return SwitchDevice(ha);
   },
+  dimmable_plugin_unit: (ha) =>
+    DimmablePlugInUnitType.set({
+      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
+    }),
   on_off_switch: SwitchDevice,
   door_lock: LockDevice,
   window_covering: CoverDevice,
@@ -285,8 +292,16 @@ const matterDeviceTypeFactories: Partial<
     ElectricalSensorType.set({
       homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
     }),
+  contact_sensor: (ha) =>
+    ContactSensorType.set({
+      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
+    }),
   motion_sensor: (ha) =>
     MotionSensorType.set({
+      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
+    }),
+  occupancy_sensor: (ha) =>
+    OccupancySensorType.set({
       homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
     }),
   mode_select: SelectDevice,

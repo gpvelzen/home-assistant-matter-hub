@@ -12,8 +12,12 @@ import {
   resolveMopIntensityList,
 } from "./behaviors/vacuum-rvc-clean-mode-server.js";
 import { VacuumRvcOperationalStateServer } from "./behaviors/vacuum-rvc-operational-state-server.js";
-import { createVacuumRvcRunModeServer } from "./behaviors/vacuum-rvc-run-mode-server.js";
 import {
+  createCleanAreaRvcRunModeServer,
+  createVacuumRvcRunModeServer,
+} from "./behaviors/vacuum-rvc-run-mode-server.js";
+import {
+  createCleanAreaServiceAreaServer,
   createCustomServiceAreaServer,
   createDefaultServiceAreaServer,
   createVacuumServiceAreaServer,
@@ -62,8 +66,16 @@ export function ServerModeVacuumDevice(
     .attributes as VacuumDeviceAttributes;
 
   // Add RvcRunModeServer with initial supportedModes (including room modes if available)
+  const cleanAreaRooms = homeAssistantEntity.mapping?.cleanAreaRooms;
+  const customAreas = homeAssistantEntity.mapping?.customServiceAreas;
   let device = ServerModeVacuumEndpointType.with(
-    createVacuumRvcRunModeServer(attributes),
+    cleanAreaRooms && cleanAreaRooms.length > 0
+      ? createCleanAreaRvcRunModeServer(cleanAreaRooms)
+      : createVacuumRvcRunModeServer(
+          attributes,
+          false,
+          customAreas && customAreas.length > 0 ? customAreas : undefined,
+        ),
   ).set({ homeAssistantEntity });
 
   // OnOff is NOT part of the RoboticVacuumCleaner device type spec.
@@ -78,10 +90,11 @@ export function ServerModeVacuumDevice(
   device = device.with(VacuumPowerSourceServer);
 
   // ServiceArea — included when rooms/custom areas are configured.
-  const customAreas = homeAssistantEntity.mapping?.customServiceAreas;
   const roomEntities = homeAssistantEntity.mapping?.roomEntities;
   const rooms = parseVacuumRooms(attributes);
-  if (customAreas && customAreas.length > 0) {
+  if (cleanAreaRooms && cleanAreaRooms.length > 0) {
+    device = device.with(createCleanAreaServiceAreaServer(cleanAreaRooms));
+  } else if (customAreas && customAreas.length > 0) {
     device = device.with(createCustomServiceAreaServer(customAreas));
   } else if (rooms.length > 0 || (roomEntities && roomEntities.length > 0)) {
     device = device.with(

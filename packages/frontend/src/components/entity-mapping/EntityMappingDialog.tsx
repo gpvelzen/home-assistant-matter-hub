@@ -74,6 +74,7 @@ export function EntityMappingDialog({
   const [customServiceAreas, setCustomServiceAreas] = useState<
     CustomServiceArea[]
   >([]);
+  const [valetudoIdentifier, setValetudoIdentifier] = useState("");
   const [availableButtons, setAvailableButtons] = useState<RelatedButton[]>([]);
   const [loadingButtons, setLoadingButtons] = useState(false);
 
@@ -112,6 +113,7 @@ export function EntityMappingDialog({
       setSuctionLevelEntity(currentMapping?.suctionLevelEntity || "");
       setMopIntensityEntity(currentMapping?.mopIntensityEntity || "");
       setCustomServiceAreas(currentMapping?.customServiceAreas || []);
+      setValetudoIdentifier(currentMapping?.valetudoIdentifier || "");
       setAvailableButtons([]);
       setCustomFanSpeedTagsList(
         Object.entries(currentMapping?.customFanSpeedTags || {}).map(
@@ -182,6 +184,7 @@ export function EntityMappingDialog({
         Object.keys(customFanSpeedTags).length > 0
           ? customFanSpeedTags
           : undefined,
+      valetudoIdentifier: valetudoIdentifier.trim() || undefined,
     });
   }, [
     editEntityId,
@@ -201,6 +204,7 @@ export function EntityMappingDialog({
     mopIntensityEntity,
     customServiceAreas,
     customFanSpeedTagsList,
+    valetudoIdentifier,
     onSave,
   ]);
 
@@ -211,6 +215,10 @@ export function EntityMappingDialog({
 
   // Show cleaning mode entity field for vacuums
   const showCleaningModeField = currentDomain === "vacuum";
+
+  // Show Valetudo identifier field for Valetudo vacuums
+  const showValetudoIdentifierField =
+    currentDomain === "vacuum" && editEntityId.startsWith("vacuum.valetudo_");
 
   // Show room entities field for vacuums (Roborock room selection)
   const showRoomEntitiesField = currentDomain === "vacuum";
@@ -341,6 +349,17 @@ export function EntityMappingDialog({
               helperText="Select entity that controls mop water level / intensity. Adds intensity options when mopping in Apple Home."
               domain="select"
             />
+            {showValetudoIdentifierField && (
+              <TextField
+                fullWidth
+                margin="normal"
+                label="Valetudo MQTT Identifier (optional)"
+                placeholder="GentleFinishedSpider"
+                value={valetudoIdentifier}
+                onChange={(e) => setValetudoIdentifier(e.target.value)}
+                helperText="Exact identifier from Valetudo Connectivity → MQTT. Only needed if it differs from the lowercase entity ID."
+              />
+            )}
             <Box sx={{ mt: 2, mb: 1 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Custom Tag Mapping

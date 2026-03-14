@@ -492,6 +492,17 @@ Mapped to **OnOffPlugInUnit**.
 
 ---
 
+### Remotes (`remote`)
+
+Mapped to **OnOffPlugInUnit**.
+
+**Behavior:**
+- Turning "on" calls `remote.turn_on` in HA
+- Turning "off" calls `remote.turn_off` in HA
+- State reflects the remote entity's on/off state
+
+---
+
 ## Entity Mapping Customization
 
 You can override the default device type mapping per entity using the Entity Mapping UI.

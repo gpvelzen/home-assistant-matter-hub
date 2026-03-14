@@ -1,4 +1,5 @@
 import type {
+  CleanAreaRoom,
   HomeAssistantDeviceRegistry,
   HomeAssistantEntityRegistry,
   HomeAssistantEntityState,
@@ -6,7 +7,10 @@ import type {
   SensorDeviceAttributes,
   VacuumRoom,
 } from "@home-assistant-matter-hub/common";
-import { SensorDeviceClass } from "@home-assistant-matter-hub/common";
+import {
+  SensorDeviceClass,
+  VacuumDeviceFeature,
+} from "@home-assistant-matter-hub/common";
 import { Logger } from "@matter/general";
 import { callService } from "home-assistant-js-websocket";
 import { keys, pickBy, values } from "lodash-es";
@@ -473,6 +477,73 @@ export class BridgeRegistry {
     }
   }
 
+  private static readonly cleanAreaLogger = Logger.get("CleanAreaRooms");
+
+  /**
+   * Resolve HA areas mapped to vacuum segments via HA 2026.3 CLEAN_AREA.
+   * Fetches the full entity registry entry (including options.vacuum.area_mapping)
+   * and resolves HA area names from the area registry.
+   * Returns CleanAreaRoom[] sorted alphabetically, or empty array if
+   * CLEAN_AREA is not supported or no area_mapping is configured.
+   */
+  async resolveCleanAreaRooms(
+    entityId: string,
+    supportedFeatures: number,
+  ): Promise<CleanAreaRoom[]> {
+    if (!this.client) return [];
+    if (!(supportedFeatures & VacuumDeviceFeature.CLEAN_AREA)) return [];
+
+    try {
+      const entry = await this.client.connection.sendMessagePromise<{
+        options?: Record<string, Record<string, unknown>>;
+      }>({
+        type: "config/entity_registry/get",
+        entity_id: entityId,
+      });
+
+      const vacuumOptions = entry?.options?.vacuum as
+        | { area_mapping?: Record<string, string[]> }
+        | undefined;
+      const areaMapping = vacuumOptions?.area_mapping;
+      if (!areaMapping || Object.keys(areaMapping).length === 0) {
+        BridgeRegistry.cleanAreaLogger.debug(
+          `${entityId}: CLEAN_AREA supported but no area_mapping configured`,
+        );
+        return [];
+      }
+
+      const rooms: CleanAreaRoom[] = [];
+      for (const haAreaId of Object.keys(areaMapping)) {
+        const areaName = this.registry.areas.get(haAreaId) ?? haAreaId;
+        rooms.push({
+          areaId: hashAreaId(haAreaId),
+          haAreaId,
+          name: areaName,
+        });
+      }
+
+      rooms.sort((a, b) => a.name.localeCompare(b.name));
+
+      if (rooms.length > 0) {
+        BridgeRegistry.cleanAreaLogger.info(
+          `${entityId}: Resolved ${rooms.length} HA areas via CLEAN_AREA mapping`,
+        );
+      }
+      return rooms;
+    } catch (error) {
+      const msg =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null
+            ? JSON.stringify(error)
+            : String(error);
+      BridgeRegistry.cleanAreaLogger.warn(
+        `${entityId}: Failed to resolve CLEAN_AREA mapping: ${msg}`,
+      );
+      return [];
+    }
+  }
+
   /**
    * Find a pressure sensor entity that belongs to the same HA device.
    * Returns the entity_id of the pressure sensor, or undefined if none found.
@@ -778,4 +849,14 @@ export class BridgeRegistry {
     }
     return true;
   }
+}
+
+function hashAreaId(areaId: string): number {
+  let hash = 0;
+  for (let i = 0; i < areaId.length; i++) {
+    const char = areaId.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return Math.abs(hash);
 }

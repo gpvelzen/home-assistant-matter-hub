@@ -5,9 +5,11 @@
  * periodic temperature changes. Use as a starting point for your own plugins.
  *
  * Supported device types:
- *   on_off_light, dimmable_light, on_off_plugin_unit,
- *   temperature_sensor, humidity_sensor, light_sensor,
- *   occupancy_sensor, contact_sensor, thermostat, door_lock, fan
+ *   on_off_light, dimmable_light, color_temperature_light, extended_color_light,
+ *   on_off_plugin_unit, dimmable_plug_in_unit, temperature_sensor,
+ *   humidity_sensor, pressure_sensor, flow_sensor, light_sensor,
+ *   occupancy_sensor, contact_sensor, air_quality_sensor, thermostat,
+ *   door_lock, fan, window_covering, generic_switch, water_leak_detector
  */
 
 export default class ExamplePlugin {

@@ -1,4 +1,5 @@
 import {
+  type CleanAreaRoom,
   type CustomServiceArea,
   type VacuumDeviceAttributes,
   VacuumDeviceFeature,
@@ -27,6 +28,42 @@ import {
 import { toAreaId } from "./vacuum-service-area-server.js";
 
 const logger = Logger.get("VacuumRvcRunModeServer");
+
+/**
+ * Build an mqtt.publish action for Valetudo segment cleaning.
+ * Valetudo uses MQTT (not vacuum.send_command) for segment-based cleaning.
+ *
+ * If valetudoIdentifier is set in the entity mapping, it is used directly.
+ * Otherwise the identifier is extracted from the HA entity ID (lowercase).
+ * HA normalizes entity IDs to lowercase, but the Valetudo MQTT topic uses
+ * the original identifier case — set valetudoIdentifier in the mapping if
+ * they don't match.
+ */
+function buildValetudoSegmentAction(
+  vacuumEntityId: string,
+  segmentIds: (string | number)[],
+  valetudoIdentifier?: string,
+) {
+  const identifier =
+    valetudoIdentifier || vacuumEntityId.replace(/^vacuum\.valetudo_/, "");
+  const topic = `valetudo/${identifier}/MapSegmentationCapability/clean/set`;
+  logger.info(
+    `Valetudo: mqtt.publish to ${topic}, segments: ${segmentIds.join(", ")}`,
+  );
+  return {
+    action: "mqtt.publish",
+    target: false as const,
+    data: {
+      topic,
+      payload: JSON.stringify({
+        action: "start_segment_action",
+        segment_ids: segmentIds.map(String),
+        iterations: 1,
+        customOrder: true,
+      }),
+    },
+  };
+}
 
 /**
  * Build supported modes from vacuum attributes.
@@ -146,6 +183,23 @@ function handleCustomServiceAreas(
   };
 }
 
+/**
+ * Resolve Matter ServiceArea area IDs to HA area_id strings using CLEAN_AREA mapping.
+ */
+function resolveCleanAreaIds(
+  selectedAreas: number[],
+  cleanAreaRooms: CleanAreaRoom[],
+): string[] {
+  const haAreaIds: string[] = [];
+  for (const areaId of selectedAreas) {
+    const room = cleanAreaRooms.find((r) => r.areaId === areaId);
+    if (room) {
+      haAreaIds.push(room.haAreaId);
+    }
+  }
+  return haAreaIds;
+}
+
 const vacuumRvcRunModeConfig = {
   getCurrentMode: (entity: { state: string }) => {
     const state = entity.state as VacuumState;
@@ -195,6 +249,22 @@ const vacuumRvcRunModeConfig = {
           );
         }
 
+        // HA 2026.3 CLEAN_AREA: resolve selected ServiceArea IDs to HA area IDs
+        const cleanAreaRooms = homeAssistant.state.mapping?.cleanAreaRooms;
+        if (cleanAreaRooms && cleanAreaRooms.length > 0) {
+          const haAreaIds = resolveCleanAreaIds(selectedAreas, cleanAreaRooms);
+          serviceArea.state.selectedAreas = [];
+          if (haAreaIds.length > 0) {
+            logger.info(
+              `CLEAN_AREA: cleaning HA areas: ${haAreaIds.join(", ")}`,
+            );
+            return {
+              action: "vacuum.clean_area",
+              data: { cleaning_area_id: haAreaIds },
+            };
+          }
+        }
+
         // Check if we have button entities mapped for rooms (Roborock integration)
         const roomEntities = homeAssistant.state.mapping?.roomEntities;
         if (roomEntities && roomEntities.length > 0) {
@@ -233,6 +303,20 @@ const vacuumRvcRunModeConfig = {
           }
         }
 
+        // Valetudo vacuums: rooms come from sensor.*_map_segments (injected
+        // at creation time), not from the vacuum entity's live attributes.
+        // parseVacuumRooms() would return [] at runtime. Use selectedAreas
+        // directly as segment IDs since toAreaId(numericId) === numericId.
+        const vacuumEntityId = homeAssistant.entityId;
+        if (vacuumEntityId.startsWith("vacuum.valetudo_")) {
+          serviceArea.state.selectedAreas = [];
+          return buildValetudoSegmentAction(
+            vacuumEntityId,
+            selectedAreas,
+            homeAssistant.state.mapping?.valetudoIdentifier,
+          );
+        }
+
         // Fallback: Try to find rooms from vacuum attributes (Dreame, Xiaomi Miot)
         const rooms = parseVacuumRooms(attributes);
 
@@ -257,28 +341,6 @@ const vacuumRvcRunModeConfig = {
 
           // Clear selected areas after use
           serviceArea.state.selectedAreas = [];
-
-          // Valetudo vacuums use mqtt.publish to trigger segment cleanup.
-          // vacuum.send_command is NOT supported by Valetudo's MQTT integration.
-          const vacuumEntityId = homeAssistant.entityId;
-          if (vacuumEntityId.startsWith("vacuum.valetudo_")) {
-            const identifier = vacuumEntityId.replace(/^vacuum\.valetudo_/, "");
-            logger.info(
-              `Valetudo vacuum: Using mqtt.publish segment_cleanup for rooms: ${roomIds.join(", ")}`,
-            );
-            return {
-              action: "mqtt.publish",
-              target: false as const,
-              data: {
-                topic: `valetudo/${identifier}/MapSegmentationCapability/clean/set`,
-                payload: JSON.stringify({
-                  segment_ids: roomIds.map(String),
-                  iterations: 1,
-                  customOrder: true,
-                }),
-              },
-            };
-          }
 
           // Dreame vacuums use their own service
           if (isDreameVacuum(attributes)) {
@@ -382,6 +444,25 @@ const vacuumRvcRunModeConfig = {
 
     logger.info(`cleanRoom called: roomMode=${roomMode}`);
 
+    // HA 2026.3 CLEAN_AREA: resolve room mode to HA area ID
+    const cleanAreaRooms = homeAssistant.state.mapping?.cleanAreaRooms;
+    if (cleanAreaRooms && cleanAreaRooms.length > 0) {
+      const sorted = [...cleanAreaRooms].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+      const areaIndex = roomMode - ROOM_MODE_BASE - 1;
+      if (areaIndex >= 0 && areaIndex < sorted.length) {
+        const area = sorted[areaIndex];
+        logger.info(
+          `cleanRoom: CLEAN_AREA "${area.name}" → vacuum.clean_area(${area.haAreaId})`,
+        );
+        return {
+          action: "vacuum.clean_area",
+          data: { cleaning_area_id: [area.haAreaId] },
+        };
+      }
+    }
+
     // Handle user-defined custom service areas first (lawn mowers, generic zone robots).
     // Mode values for custom areas: ROOM_MODE_BASE + (1-based sorted index).
     const customAreas = homeAssistant.state.mapping?.customServiceAreas;
@@ -403,6 +484,20 @@ const vacuumRvcRunModeConfig = {
       }
     }
 
+    // Valetudo vacuums: rooms come from sensor.*_map_segments (injected
+    // at creation time), not from the vacuum entity's live attributes.
+    // parseVacuumRooms() would return [] at runtime. The segment ID equals
+    // roomMode - ROOM_MODE_BASE since toAreaId(numericId) === numericId.
+    const vacuumEntityId = entity.entity_id;
+    if (vacuumEntityId.startsWith("vacuum.valetudo_")) {
+      const segmentId = getRoomIdFromMode(roomMode);
+      return buildValetudoSegmentAction(
+        vacuumEntityId,
+        [segmentId],
+        homeAssistant.state.mapping?.valetudoIdentifier,
+      );
+    }
+
     // Regular room handling from vacuum attributes (Dreame, Roborock, etc.)
     const rooms = parseVacuumRooms(attributes);
     const numericIdFromMode = getRoomIdFromMode(roomMode);
@@ -417,28 +512,6 @@ const vacuumRvcRunModeConfig = {
     if (room) {
       // Use originalId for commands (Dreame multi-floor: id is deduplicated, originalId is per-floor)
       const commandId = room.originalId ?? room.id;
-
-      // Valetudo vacuums use mqtt.publish to trigger segment cleanup.
-      // vacuum.send_command is NOT supported by Valetudo's MQTT integration.
-      const vacuumEntityId = entity.entity_id;
-      if (vacuumEntityId.startsWith("vacuum.valetudo_")) {
-        const identifier = vacuumEntityId.replace(/^vacuum\.valetudo_/, "");
-        logger.info(
-          `Valetudo vacuum: Using mqtt.publish segment_cleanup for room ${room.name} (id: ${commandId})`,
-        );
-        return {
-          action: "mqtt.publish",
-          target: false as const,
-          data: {
-            topic: `valetudo/${identifier}/MapSegmentationCapability/clean/set`,
-            payload: JSON.stringify({
-              segment_ids: [String(commandId)],
-              iterations: 1,
-              customOrder: true,
-            }),
-          },
-        };
-      }
 
       // Dreame vacuums use their own service: dreame_vacuum.vacuum_clean_segment
       if (isDreameVacuum(attributes)) {
@@ -553,6 +626,50 @@ export function createVacuumRvcRunModeServer(
 
   return RvcRunModeServer(vacuumRvcRunModeConfig, {
     supportedModes,
+    currentMode: RvcSupportedRunMode.Idle,
+  });
+}
+
+/**
+ * Create a VacuumRvcRunModeServer with HA areas from CLEAN_AREA mapping.
+ * Room modes are generated from the HA areas so Apple Home (which doesn't use
+ * ServiceArea.selectAreas) can still trigger per-area cleaning.
+ */
+export function createCleanAreaRvcRunModeServer(
+  cleanAreaRooms: CleanAreaRoom[],
+) {
+  const modes: RvcRunMode.ModeOption[] = [
+    {
+      label: "Idle",
+      mode: RvcSupportedRunMode.Idle,
+      modeTags: [{ value: RvcRunMode.ModeTag.Idle }],
+    },
+    {
+      label: "Cleaning",
+      mode: RvcSupportedRunMode.Cleaning,
+      modeTags: [{ value: RvcRunMode.ModeTag.Cleaning }],
+    },
+  ];
+
+  const sorted = [...cleanAreaRooms].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  for (let i = 0; i < sorted.length; i++) {
+    const modeValue = ROOM_MODE_BASE + i + 1;
+    if (modeValue > 255) continue;
+    modes.push({
+      label: sorted[i].name,
+      mode: modeValue,
+      modeTags: [{ value: RvcRunMode.ModeTag.Cleaning }],
+    });
+  }
+
+  logger.info(
+    `Creating CLEAN_AREA RvcRunModeServer with ${cleanAreaRooms.length} HA areas, ${modes.length} total modes`,
+  );
+
+  return RvcRunModeServer(vacuumRvcRunModeConfig, {
+    supportedModes: modes,
     currentMode: RvcSupportedRunMode.Idle,
   });
 }

@@ -83,8 +83,7 @@ export class BridgeEndpointManager extends Service {
       for (const cluster of device.clusters) {
         initialState[cluster.clusterId] = cluster.attributes;
       }
-      // biome-ignore lint/suspicious/noExplicitAny: EndpointType lacks .set() in its type but all factory results are MutableEndpoints
-      const configuredType = (type as any).set(initialState) as typeof type;
+      const configuredType = type.set(initialState);
       const endpoint = new Endpoint(configuredType, {
         id: `plugin_${device.id}`,
       });
