@@ -8,8 +8,8 @@ import fr from "./locales/fr.json";
 import it from "./locales/it.json";
 import sv from "./locales/sv.json";
 import th from "./locales/th.json";
-import zh from "./locales/zh.json";
 import tr from "./locales/tr.json";
+import zh from "./locales/zh.json";
 
 const STORAGE_KEY = "hamh-translation-overrides";
 const CUSTOM_LANGS_KEY = "hamh-custom-languages";
