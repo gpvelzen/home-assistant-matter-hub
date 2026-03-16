@@ -215,10 +215,7 @@ const config: ThermostatServerConfig = {
       (m) => m === ClimateHvacMode.cool || m === ClimateHvacMode.heat_cool,
     );
     const hasHeating = modes.some(
-      (m) =>
-        m === ClimateHvacMode.heat ||
-        m === ClimateHvacMode.heat_cool ||
-        m === ClimateHvacMode.auto,
+      (m) => m === ClimateHvacMode.heat || m === ClimateHvacMode.heat_cool,
     );
     if (hasCooling && hasHeating) {
       // CoolingAndHeating only for devices with AutoMode (heat_cool + explicit

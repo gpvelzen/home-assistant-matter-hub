@@ -379,7 +379,11 @@ export class ThermostatServerBase extends FullFeaturedBase {
     // reverts any state write back to the internal value. We must update
     // internal first so the reactor allows our new value through. The
     // systemMode $Changing reactor also validates against the internal value.
-    const controlSequence = config.getControlSequence(entity.state, this.agent);
+    let controlSequence = config.getControlSequence(entity.state, this.agent);
+    // Clamp controlSequenceOfOperation to match enabled features.
+    // Config callbacks may return values incompatible with the thermostat's
+    // actual feature set (e.g., HeatingOnly for a cooling-only AC with 'auto').
+    controlSequence = this.clampControlSequence(controlSequence);
     // biome-ignore lint/suspicious/noExplicitAny: Access protected internal state from Matter.js base
     (this as any).internal.controlSequenceOfOperation = controlSequence;
 
@@ -744,6 +748,36 @@ export class ThermostatServerBase extends FullFeaturedBase {
             return allOff;
         }
     }
+  }
+
+  private clampControlSequence(
+    value: Thermostat.ControlSequenceOfOperation,
+  ): Thermostat.ControlSequenceOfOperation {
+    const hasHeat = this.features.heating;
+    const hasCool = this.features.cooling;
+    const needsHeat =
+      value === Thermostat.ControlSequenceOfOperation.HeatingOnly ||
+      value === Thermostat.ControlSequenceOfOperation.HeatingWithReheat;
+    const needsCool =
+      value === Thermostat.ControlSequenceOfOperation.CoolingOnly ||
+      value === Thermostat.ControlSequenceOfOperation.CoolingWithReheat;
+    const needsBoth =
+      value === Thermostat.ControlSequenceOfOperation.CoolingAndHeating ||
+      value ===
+        Thermostat.ControlSequenceOfOperation.CoolingAndHeatingWithReheat;
+    if (needsHeat && !hasHeat) {
+      return Thermostat.ControlSequenceOfOperation.CoolingOnly;
+    }
+    if (needsCool && !hasCool) {
+      return Thermostat.ControlSequenceOfOperation.HeatingOnly;
+    }
+    if (needsBoth && !hasHeat) {
+      return Thermostat.ControlSequenceOfOperation.CoolingOnly;
+    }
+    if (needsBoth && !hasCool) {
+      return Thermostat.ControlSequenceOfOperation.HeatingOnly;
+    }
+    return value;
   }
 
   private clampSetpoint(
