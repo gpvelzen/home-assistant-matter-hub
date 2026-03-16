@@ -34,6 +34,7 @@ function configToProfileEntry(
     customServiceAreas: config.customServiceAreas,
     customFanSpeedTags: config.customFanSpeedTags,
     valetudoIdentifier: config.valetudoIdentifier,
+    coverSwapOpenClose: config.coverSwapOpenClose,
   };
 }
 
@@ -189,6 +190,7 @@ export function mappingProfileApi(
           customServiceAreas: entry.customServiceAreas,
           customFanSpeedTags: entry.customFanSpeedTags,
           valetudoIdentifier: entry.valetudoIdentifier,
+          coverSwapOpenClose: entry.coverSwapOpenClose,
         });
         applied++;
       } catch (e) {

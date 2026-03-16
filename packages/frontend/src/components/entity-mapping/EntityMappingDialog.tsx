@@ -75,6 +75,7 @@ export function EntityMappingDialog({
     CustomServiceArea[]
   >([]);
   const [valetudoIdentifier, setValetudoIdentifier] = useState("");
+  const [coverSwapOpenClose, setCoverSwapOpenClose] = useState(false);
   const [availableButtons, setAvailableButtons] = useState<RelatedButton[]>([]);
   const [loadingButtons, setLoadingButtons] = useState(false);
 
@@ -114,6 +115,7 @@ export function EntityMappingDialog({
       setMopIntensityEntity(currentMapping?.mopIntensityEntity || "");
       setCustomServiceAreas(currentMapping?.customServiceAreas || []);
       setValetudoIdentifier(currentMapping?.valetudoIdentifier || "");
+      setCoverSwapOpenClose(currentMapping?.coverSwapOpenClose || false);
       setAvailableButtons([]);
       setCustomFanSpeedTagsList(
         Object.entries(currentMapping?.customFanSpeedTags || {}).map(
@@ -185,6 +187,7 @@ export function EntityMappingDialog({
           ? customFanSpeedTags
           : undefined,
       valetudoIdentifier: valetudoIdentifier.trim() || undefined,
+      coverSwapOpenClose: coverSwapOpenClose || undefined,
     });
   }, [
     editEntityId,
@@ -205,6 +208,7 @@ export function EntityMappingDialog({
     customServiceAreas,
     customFanSpeedTagsList,
     valetudoIdentifier,
+    coverSwapOpenClose,
     onSave,
   ]);
 
@@ -227,6 +231,10 @@ export function EntityMappingDialog({
   const showHumidityBatteryFields =
     matterDeviceType === "temperature_sensor" ||
     (currentDomain === "sensor" && !matterDeviceType);
+
+  // Show swap open/close option for covers
+  const showCoverSwapField =
+    matterDeviceType === "window_covering" || currentDomain === "cover";
 
   // Show PIN disable option for locks
   const showLockPinField =
@@ -649,6 +657,19 @@ export function EntityMappingDialog({
               Add Area
             </Button>
           </Box>
+        )}
+
+        {showCoverSwapField && (
+          <FormControlLabel
+            control={
+              <Switch
+                checked={coverSwapOpenClose}
+                onChange={(e) => setCoverSwapOpenClose(e.target.checked)}
+              />
+            }
+            label="Swap open/close commands (for awnings and similar covers)"
+            sx={{ mt: 1, display: "block" }}
+          />
         )}
 
         {showLockPinField && (

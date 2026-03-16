@@ -70,9 +70,13 @@ const adjustPositionForWriting = (position: number, agent: Agent) => {
 };
 
 /**
- * Checks if open/close commands should be swapped (for Alexa compatibility).
+ * Checks if open/close commands should be swapped.
+ * Per-entity mapping overrides the bridge-level feature flag.
  */
 const shouldSwapOpenClose = (agent: Agent): boolean => {
+  const homeAssistant = agent.get(HomeAssistantEntityBehavior);
+  const entitySwap = homeAssistant.state.mapping?.coverSwapOpenClose;
+  if (entitySwap !== undefined) return entitySwap;
   const { featureFlags } = agent.env.get(BridgeDataProvider);
   return featureFlags?.coverSwapOpenClose === true;
 };

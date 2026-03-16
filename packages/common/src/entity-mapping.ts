@@ -146,6 +146,13 @@ export interface EntityMappingConfig {
    */
   readonly valetudoIdentifier?: string;
   /**
+   * Optional: Swap open/close commands for this individual cover entity.
+   * Useful for awnings where HA "open" means extending outward but Matter
+   * controllers interpret "open" as going up. Overrides the bridge-level
+   * coverSwapOpenClose feature flag for this entity only.
+   */
+  readonly coverSwapOpenClose?: boolean;
+  /**
    * Auto-populated at runtime when the vacuum supports HA 2026.3 CLEAN_AREA.
    * Maps HA areas (from the user's segment-to-area mapping in HA) to Matter
    * ServiceArea area IDs. When set, vacuum.clean_area is used instead of
@@ -185,6 +192,7 @@ export interface EntityMappingRequest {
   readonly customServiceAreas?: CustomServiceArea[];
   readonly customFanSpeedTags?: Record<string, number>;
   readonly valetudoIdentifier?: string;
+  readonly coverSwapOpenClose?: boolean;
 }
 
 export interface EntityMappingResponse {

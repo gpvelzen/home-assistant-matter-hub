@@ -228,6 +228,7 @@ export function backupApi(
                     suctionLevelEntity: config.suctionLevelEntity,
                     mopIntensityEntity: config.mopIntensityEntity,
                     valetudoIdentifier: config.valetudoIdentifier,
+                    coverSwapOpenClose: config.coverSwapOpenClose,
                   });
                   mappingsRestored++;
                 }

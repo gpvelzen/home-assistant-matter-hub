@@ -47,6 +47,7 @@ export function entityMappingApi(
       customServiceAreas: body.customServiceAreas,
       customFanSpeedTags: body.customFanSpeedTags,
       valetudoIdentifier: body.valetudoIdentifier,
+      coverSwapOpenClose: body.coverSwapOpenClose,
     };
 
     const config = await mappingStorage.setMapping(request);

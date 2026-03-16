@@ -129,6 +129,7 @@ export class EntityMappingStorage extends Service {
           ? request.customFanSpeedTags
           : undefined,
       valetudoIdentifier: request.valetudoIdentifier?.trim() || undefined,
+      coverSwapOpenClose: request.coverSwapOpenClose || undefined,
     };
 
     if (
@@ -149,7 +150,8 @@ export class EntityMappingStorage extends Service {
       (!config.customServiceAreas || config.customServiceAreas.length === 0) &&
       (!config.customFanSpeedTags ||
         Object.keys(config.customFanSpeedTags).length === 0) &&
-      !config.valetudoIdentifier
+      !config.valetudoIdentifier &&
+      !config.coverSwapOpenClose
     ) {
       bridgeMap.delete(request.entityId);
     } else {

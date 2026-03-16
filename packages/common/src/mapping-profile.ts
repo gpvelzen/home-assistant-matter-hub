@@ -25,6 +25,7 @@ export interface MappingProfileEntry {
   readonly customServiceAreas?: CustomServiceArea[];
   readonly customFanSpeedTags?: Record<string, number>;
   readonly valetudoIdentifier?: string;
+  readonly coverSwapOpenClose?: boolean;
 }
 
 export interface MappingProfile {
