@@ -62,6 +62,7 @@ export function EntityMappingDialog({
   const [disabled, setDisabled] = useState(false);
   const [filterLifeEntity, setFilterLifeEntity] = useState("");
   const [cleaningModeEntity, setCleaningModeEntity] = useState("");
+  const [temperatureEntity, setTemperatureEntity] = useState("");
   const [humidityEntity, setHumidityEntity] = useState("");
   const [pressureEntity, setPressureEntity] = useState("");
   const [batteryEntity, setBatteryEntity] = useState("");
@@ -104,6 +105,7 @@ export function EntityMappingDialog({
       setDisabled(currentMapping?.disabled || false);
       setFilterLifeEntity(currentMapping?.filterLifeEntity || "");
       setCleaningModeEntity(currentMapping?.cleaningModeEntity || "");
+      setTemperatureEntity(currentMapping?.temperatureEntity || "");
       setHumidityEntity(currentMapping?.humidityEntity || "");
       setPressureEntity(currentMapping?.pressureEntity || "");
       setBatteryEntity(currentMapping?.batteryEntity || "");
@@ -171,6 +173,7 @@ export function EntityMappingDialog({
       disabled,
       filterLifeEntity: filterLifeEntity.trim() || undefined,
       cleaningModeEntity: cleaningModeEntity.trim() || undefined,
+      temperatureEntity: temperatureEntity.trim() || undefined,
       humidityEntity: humidityEntity.trim() || undefined,
       pressureEntity: pressureEntity.trim() || undefined,
       batteryEntity: batteryEntity.trim() || undefined,
@@ -196,6 +199,7 @@ export function EntityMappingDialog({
     disabled,
     filterLifeEntity,
     cleaningModeEntity,
+    temperatureEntity,
     humidityEntity,
     pressureEntity,
     batteryEntity,
@@ -231,6 +235,9 @@ export function EntityMappingDialog({
   const showHumidityBatteryFields =
     matterDeviceType === "temperature_sensor" ||
     (currentDomain === "sensor" && !matterDeviceType);
+
+  // Show temperature/humidity entity fields for air purifiers (manual sensor mapping)
+  const showAirPurifierSensorFields = matterDeviceType === "air_purifier";
 
   // Show swap open/close option for covers
   const showCoverSwapField =
@@ -543,6 +550,27 @@ export function EntityMappingDialog({
               label="Battery Sensor (optional)"
               placeholder="sensor.h_t_bad_battery"
               helperText="Include battery level from a separate sensor entity"
+              domain="sensor"
+            />
+          </>
+        )}
+
+        {showAirPurifierSensorFields && (
+          <>
+            <EntityAutocomplete
+              value={temperatureEntity}
+              onChange={setTemperatureEntity}
+              label="Temperature Sensor (optional)"
+              placeholder="sensor.air_purifier_temperature"
+              helperText="Add temperature measurement to this air purifier from a separate sensor entity"
+              domain="sensor"
+            />
+            <EntityAutocomplete
+              value={humidityEntity}
+              onChange={setHumidityEntity}
+              label="Humidity Sensor (optional)"
+              placeholder="sensor.air_purifier_humidity"
+              helperText="Add humidity measurement to this air purifier from a separate sensor entity"
               domain="sensor"
             />
           </>

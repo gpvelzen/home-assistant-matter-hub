@@ -218,6 +218,7 @@ export function backupApi(
                     disabled: config.disabled,
                     filterLifeEntity: config.filterLifeEntity,
                     cleaningModeEntity: config.cleaningModeEntity,
+                    temperatureEntity: config.temperatureEntity,
                     humidityEntity: config.humidityEntity,
                     pressureEntity: config.pressureEntity,
                     batteryEntity: config.batteryEntity,

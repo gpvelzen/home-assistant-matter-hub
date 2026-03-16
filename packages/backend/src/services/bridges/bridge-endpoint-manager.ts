@@ -388,11 +388,17 @@ export class BridgeEndpointManager extends Service {
         const matterType = m?.matterDeviceType ?? "fan";
         if (matterType !== "air_purifier") continue;
         const ent = this.registry.entity(eid);
-        if (!ent?.device_id) continue;
-        const tempId = this.registry.findTemperatureEntityForDevice(
-          ent.device_id,
-        );
-        const humId = this.registry.findHumidityEntityForDevice(ent.device_id);
+        // Manual mapping takes priority over auto-discovery
+        const tempId =
+          m?.temperatureEntity ||
+          (ent?.device_id
+            ? this.registry.findTemperatureEntityForDevice(ent.device_id)
+            : undefined);
+        const humId =
+          m?.humidityEntity ||
+          (ent?.device_id
+            ? this.registry.findHumidityEntityForDevice(ent.device_id)
+            : undefined);
         if (tempId) this.registry.markComposedSubEntityUsed(tempId);
         if (humId) this.registry.markComposedSubEntityUsed(humId);
       }

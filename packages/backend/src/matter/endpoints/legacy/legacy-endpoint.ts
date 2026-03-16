@@ -346,18 +346,23 @@ export class LegacyEndpoint extends EntityEndpoint {
       }
 
       // When this is a fan entity mapped as air_purifier, create a composed
-      // device with sensor/thermostat sub-endpoints from related entities on
-      // the same HA device (Matter spec 9.4.4).
+      // device with sensor clusters from related entities on the same HA
+      // device or from manually mapped sensor entities (Matter spec 9.4.4).
       const resolvedMatterType =
         mapping?.matterDeviceType ??
         (entityId.startsWith("fan.") ? "fan" : undefined);
-      if (resolvedMatterType === "air_purifier" && entity.device_id) {
-        const temperatureEntityId = registry.findTemperatureEntityForDevice(
-          entity.device_id,
-        );
-        const humidityEntityId = registry.findHumidityEntityForDevice(
-          entity.device_id,
-        );
+      if (resolvedMatterType === "air_purifier") {
+        // Manual mapping takes priority over auto-discovery
+        const temperatureEntityId =
+          effectiveMapping?.temperatureEntity ||
+          (entity.device_id
+            ? registry.findTemperatureEntityForDevice(entity.device_id)
+            : undefined);
+        const humidityEntityId =
+          effectiveMapping?.humidityEntity ||
+          (entity.device_id
+            ? registry.findHumidityEntityForDevice(entity.device_id)
+            : undefined);
         // Only compose if at least one sensor sub-entity is available.
         // Climate entities stay standalone — ThermostatDevice competes with
         // the parent for Apple Home's primary tile selection.
