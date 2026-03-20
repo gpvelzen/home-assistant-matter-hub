@@ -1,4 +1,5 @@
 import {
+  type ComposedSubEntity,
   type CustomServiceArea,
   domainToDefaultMatterTypes,
   type EntityMappingConfig,
@@ -77,6 +78,9 @@ export function EntityMappingDialog({
   >([]);
   const [valetudoIdentifier, setValetudoIdentifier] = useState("");
   const [coverSwapOpenClose, setCoverSwapOpenClose] = useState(false);
+  const [composedEntities, setComposedEntities] = useState<ComposedSubEntity[]>(
+    [],
+  );
   const [availableButtons, setAvailableButtons] = useState<RelatedButton[]>([]);
   const [loadingButtons, setLoadingButtons] = useState(false);
 
@@ -118,6 +122,7 @@ export function EntityMappingDialog({
       setCustomServiceAreas(currentMapping?.customServiceAreas || []);
       setValetudoIdentifier(currentMapping?.valetudoIdentifier || "");
       setCoverSwapOpenClose(currentMapping?.coverSwapOpenClose || false);
+      setComposedEntities(currentMapping?.composedEntities || []);
       setAvailableButtons([]);
       setCustomFanSpeedTagsList(
         Object.entries(currentMapping?.customFanSpeedTags || {}).map(
@@ -191,6 +196,10 @@ export function EntityMappingDialog({
           : undefined,
       valetudoIdentifier: valetudoIdentifier.trim() || undefined,
       coverSwapOpenClose: coverSwapOpenClose || undefined,
+      composedEntities:
+        composedEntities.filter((e) => e.entityId?.trim()).length > 0
+          ? composedEntities.filter((e) => e.entityId?.trim())
+          : undefined,
     });
   }, [
     editEntityId,
@@ -213,6 +222,7 @@ export function EntityMappingDialog({
     customFanSpeedTagsList,
     valetudoIdentifier,
     coverSwapOpenClose,
+    composedEntities,
     onSave,
   ]);
 
@@ -712,6 +722,96 @@ export function EntityMappingDialog({
             sx={{ mt: 1, display: "block" }}
           />
         )}
+
+        <Box sx={{ mt: 2, mb: 1 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Composed Sub-Entities
+          </Typography>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mb: 1, display: "block" }}
+          >
+            Group additional HA entities into this device. Each entity becomes a
+            sub-endpoint under a shared Matter device. Requires the
+            autoComposedDevices feature flag.
+          </Typography>
+          {composedEntities.map((sub, index) => (
+            <Box
+              key={`composed-${index}`}
+              sx={{
+                display: "flex",
+                gap: 1,
+                mb: 1,
+                alignItems: "flex-start",
+              }}
+            >
+              <Box sx={{ flex: 2 }}>
+                <EntityAutocomplete
+                  value={sub.entityId}
+                  onChange={(val) => {
+                    const updated = [...composedEntities];
+                    updated[index] = { ...sub, entityId: val };
+                    setComposedEntities(updated);
+                  }}
+                  label="Entity ID"
+                  placeholder="sensor.temperature"
+                />
+              </Box>
+              <FormControl size="small" sx={{ flex: 1, mt: 1 }}>
+                <InputLabel>Device Type</InputLabel>
+                <Select
+                  value={sub.matterDeviceType || ""}
+                  label="Device Type"
+                  onChange={(e) => {
+                    const updated = [...composedEntities];
+                    updated[index] = {
+                      ...sub,
+                      matterDeviceType:
+                        (e.target.value as MatterDeviceType) || undefined,
+                    };
+                    setComposedEntities(updated);
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>Auto-detect</em>
+                  </MenuItem>
+                  {(
+                    Object.entries(matterDeviceTypeLabels) as [
+                      MatterDeviceType,
+                      string,
+                    ][]
+                  ).map(([key, label]) => (
+                    <MenuItem key={key} value={key}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <IconButton
+                size="small"
+                color="error"
+                sx={{ mt: 1.5 }}
+                onClick={() => {
+                  setComposedEntities(
+                    composedEntities.filter((_, i) => i !== index),
+                  );
+                }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          ))}
+          <Button
+            size="small"
+            startIcon={<AddCircleOutlineIcon />}
+            onClick={() =>
+              setComposedEntities([...composedEntities, { entityId: "" }])
+            }
+          >
+            Add Sub-Entity
+          </Button>
+        </Box>
 
         <FormControlLabel
           control={

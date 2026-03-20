@@ -21,6 +21,7 @@ import {
 } from "../../endpoints/entity-endpoint.js";
 import { ComposedAirPurifierEndpoint } from "../composed/composed-air-purifier-endpoint.js";
 import { ComposedSensorEndpoint } from "../composed/composed-sensor-endpoint.js";
+import { UserComposedEndpoint } from "../composed/user-composed-endpoint.js";
 import { createLegacyEndpointType } from "./create-legacy-endpoint-type.js";
 import { supportsCleaningModes } from "./vacuum/behaviors/vacuum-rvc-clean-mode-server.js";
 
@@ -317,6 +318,32 @@ export class LegacyEndpoint extends EntityEndpoint {
           }
         }
       }
+    }
+
+    // User-defined composed device: when composedEntities is configured,
+    // group the primary entity with additional entities into a single
+    // Matter composed device under a BridgedNodeEndpoint parent.
+    if (
+      registry.isAutoComposedDevicesEnabled() &&
+      effectiveMapping?.composedEntities &&
+      effectiveMapping.composedEntities.length > 0
+    ) {
+      const composedAreaName = registry.getAreaName(entityId);
+      const composed = await UserComposedEndpoint.create({
+        registry,
+        primaryEntityId: entityId,
+        mapping: effectiveMapping,
+        composedEntities: effectiveMapping.composedEntities,
+        customName: effectiveMapping?.customName,
+        areaName: composedAreaName,
+      });
+      if (composed) {
+        return composed as unknown as LegacyEndpoint;
+      }
+      // Fallback to standalone if composed creation fails
+      logger.warn(
+        `User composed device creation failed for ${entityId}, falling back to standalone`,
+      );
     }
 
     // When autoComposedDevices is enabled and this is a temperature sensor

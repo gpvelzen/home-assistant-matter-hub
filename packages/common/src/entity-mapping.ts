@@ -45,11 +45,23 @@ export type MatterDeviceType =
   | "water_valve"
   | "window_covering";
 
+export interface ComposedSubEntity {
+  readonly entityId: string;
+  readonly matterDeviceType?: MatterDeviceType;
+}
+
 export interface EntityMappingConfig {
   readonly entityId: string;
   readonly matterDeviceType?: MatterDeviceType;
   readonly customName?: string;
   readonly disabled?: boolean;
+  /**
+   * Optional: Array of additional entities to compose into this device.
+   * Each entry becomes a sub-endpoint under a shared BridgedNodeEndpoint.
+   * Requires the autoComposedDevices feature flag.
+   * Example: [{ entityId: "sensor.temperature", matterDeviceType: "temperature_sensor" }]
+   */
+  readonly composedEntities?: ComposedSubEntity[];
   /**
    * Optional: Entity ID of a sensor that provides filter life percentage (0-100).
    * Used for Air Purifiers to show HEPA filter life in Matter controllers.
@@ -200,6 +212,7 @@ export interface EntityMappingRequest {
   readonly customFanSpeedTags?: Record<string, number>;
   readonly valetudoIdentifier?: string;
   readonly coverSwapOpenClose?: boolean;
+  readonly composedEntities?: ComposedSubEntity[];
 }
 
 export interface EntityMappingResponse {
