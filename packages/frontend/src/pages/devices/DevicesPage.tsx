@@ -1,11 +1,14 @@
 import type {
   EndpointData,
   EntityMappingConfig,
+  FailedEntity,
 } from "@home-assistant-matter-hub/common";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import CloseIcon from "@mui/icons-material/Close";
 import DevicesIcon from "@mui/icons-material/Devices";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import WarningIcon from "@mui/icons-material/Warning";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -16,6 +19,10 @@ import FormControl from "@mui/material/FormControl";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
 import InputLabel from "@mui/material/InputLabel";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import Pagination from "@mui/material/Pagination";
 import Select from "@mui/material/Select";
@@ -26,6 +33,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router";
 import type { DeviceImageInfo } from "../../api/device-images";
 import { resolveDeviceImages } from "../../api/device-images";
 import {
@@ -49,10 +57,16 @@ interface DeviceInfo {
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const PAGE_SIZE_KEY = "hamh-devices-page-size";
 
+interface FailedEntityInfo extends FailedEntity {
+  bridgeName: string;
+}
+
 export const DevicesPage = () => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const { content: bridges, isLoading: bridgesLoading } = useBridges();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const showFailed = searchParams.get("showFailed") === "true";
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBridge, setSelectedBridge] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("");
@@ -184,6 +198,25 @@ export const DevicesPage = () => {
 
   const isLoading =
     bridgesLoading || (bridges && bridges.length > 0 && devices.length === 0);
+
+  // Collect failed entities from all bridges
+  const failedEntities = useMemo<FailedEntityInfo[]>(() => {
+    if (!bridges) return [];
+    const result: FailedEntityInfo[] = [];
+    for (const bridge of bridges) {
+      for (const fe of bridge.failedEntities ?? []) {
+        result.push({ ...fe, bridgeName: bridge.name });
+      }
+    }
+    return result;
+  }, [bridges]);
+
+  const dismissFailed = useCallback(() => {
+    setSearchParams((prev) => {
+      prev.delete("showFailed");
+      return prev;
+    });
+  }, [setSearchParams]);
 
   // Filter devices
   const filteredDevices = useMemo(() => {
@@ -333,6 +366,62 @@ export const DevicesPage = () => {
           {t("common.refresh")}
         </Button>
       </Typography>
+
+      {showFailed && failedEntities.length > 0 && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 3 }}
+          action={
+            <IconButton size="small" color="inherit" onClick={dismissFailed}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          }
+        >
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            {t("devices.failedEntitiesTitle", {
+              count: failedEntities.length,
+              defaultValue: `${failedEntities.length} failed entities`,
+            })}
+          </Typography>
+          <List dense disablePadding>
+            {failedEntities.map((fe) => (
+              <ListItem key={`${fe.bridgeName}-${fe.entityId}`} sx={{ py: 0 }}>
+                <ListItemIcon sx={{ minWidth: 32 }}>
+                  <WarningIcon color="warning" fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary={fe.entityId}
+                  secondary={`${fe.bridgeName} — ${fe.reason}`}
+                  primaryTypographyProps={{
+                    variant: "body2",
+                    fontWeight: "bold",
+                  }}
+                  secondaryTypographyProps={{ variant: "caption" }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Alert>
+      )}
+
+      {showFailed && failedEntities.length === 0 && (
+        <Alert
+          severity="success"
+          sx={{ mb: 3 }}
+          action={
+            <IconButton size="small" color="inherit" onClick={dismissFailed}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          }
+        >
+          <Typography variant="body2">
+            {t("devices.noFailedEntities", {
+              defaultValue:
+                "No failed entities — all devices loaded successfully.",
+            })}
+          </Typography>
+        </Alert>
+      )}
 
       {/* Filters */}
       <Card sx={{ mb: 3 }}>

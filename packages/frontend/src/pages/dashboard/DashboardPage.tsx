@@ -104,7 +104,7 @@ function StatCard({
   value: string | number;
   icon: React.ReactNode;
   color: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   onClick?: () => void;
 }) {
   const content = (
@@ -504,7 +504,21 @@ export const DashboardPage = () => {
                     icon={<DevicesIcon />}
                     color={theme.palette.primary.main}
                     subtitle={
-                      totalFailed > 0 ? `${totalFailed} failed` : undefined
+                      totalFailed > 0 ? (
+                        <Chip
+                          icon={<WarningIcon sx={{ fontSize: 14 }} />}
+                          label={`${totalFailed} failed`}
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                          clickable
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`${navigation.devices}?showFailed=true`);
+                          }}
+                          sx={{ height: 22, fontSize: "0.7rem" }}
+                        />
+                      ) : undefined
                     }
                     onClick={() => navigate(navigation.devices)}
                   />
