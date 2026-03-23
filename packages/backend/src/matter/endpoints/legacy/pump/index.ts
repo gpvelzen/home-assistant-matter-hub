@@ -1,12 +1,11 @@
 import type { EndpointType } from "@matter/main";
 import { PumpDevice } from "@matter/main/devices";
-import { EntityStateProvider } from "../../../../services/bridges/entity-state-provider.js";
 import type { HomeAssistantAction } from "../../../../services/home-assistant/home-assistant-actions.js";
 import { BasicInformationServer } from "../../../behaviors/basic-information-server.js";
 import { HomeAssistantEntityBehavior } from "../../../behaviors/home-assistant-entity-behavior.js";
 import { IdentifyServer } from "../../../behaviors/identify-server.js";
 import { OnOffServer } from "../../../behaviors/on-off-server.js";
-import { PowerSourceServer } from "../../../behaviors/power-source-server.js";
+import { DefaultPowerSourceServer } from "../../../behaviors/power-source-server.js";
 import { PumpConfigurationAndControlServer } from "../../../behaviors/pump-configuration-and-control-server.js";
 
 const PumpOnOffServer = OnOffServer({
@@ -28,29 +27,7 @@ const PumpWithBatteryType = PumpDevice.with(
   HomeAssistantEntityBehavior,
   PumpOnOffServer,
   PumpConfigurationAndControlServer,
-  PowerSourceServer({
-    getBatteryPercent: (entity, agent) => {
-      const homeAssistant = agent.get(HomeAssistantEntityBehavior);
-      const batteryEntity = homeAssistant.state.mapping?.batteryEntity;
-      if (batteryEntity) {
-        const stateProvider = agent.env.get(EntityStateProvider);
-        const battery = stateProvider.getBatteryPercent(batteryEntity);
-        if (battery != null) {
-          return Math.max(0, Math.min(100, battery));
-        }
-      }
-
-      const attrs = entity.attributes as {
-        battery?: number;
-        battery_level?: number;
-      };
-      const level = attrs.battery_level ?? attrs.battery;
-      if (level == null || Number.isNaN(Number(level))) {
-        return null;
-      }
-      return Number(level);
-    },
-  }),
+  DefaultPowerSourceServer,
 );
 
 export function PumpEndpoint(

@@ -8,44 +8,17 @@ import {
   RoomAirConditionerDevice,
   ThermostatDevice,
 } from "@matter/main/devices";
-import { EntityStateProvider } from "../../../../services/bridges/entity-state-provider.js";
 import { InvalidDeviceError } from "../../../../utils/errors/invalid-device-error.js";
 import { testBit } from "../../../../utils/test-bit.js";
 import { BasicInformationServer } from "../../../behaviors/basic-information-server.js";
 import { HomeAssistantEntityBehavior } from "../../../behaviors/home-assistant-entity-behavior.js";
 import { IdentifyServer } from "../../../behaviors/identify-server.js";
-import { PowerSourceServer } from "../../../behaviors/power-source-server.js";
+import { DefaultPowerSourceServer } from "../../../behaviors/power-source-server.js";
 import { ThermostatUiConfigServer } from "../../../behaviors/thermostat-ui-config-server.js";
 import { ClimateFanControlServer } from "./behaviors/climate-fan-control-server.js";
 import { ClimateHumidityMeasurementServer } from "./behaviors/climate-humidity-measurement-server.js";
 import { ClimateOnOffServer } from "./behaviors/climate-on-off-server.js";
 import { ClimateThermostatServer } from "./behaviors/climate-thermostat-server.js";
-
-const ClimatePowerSourceServer = PowerSourceServer({
-  getBatteryPercent: (entity, agent) => {
-    // First check for battery entity from mapping (auto-assigned or manual)
-    const homeAssistant = agent.get(HomeAssistantEntityBehavior);
-    const batteryEntity = homeAssistant.state.mapping?.batteryEntity;
-    if (batteryEntity) {
-      const stateProvider = agent.env.get(EntityStateProvider);
-      const battery = stateProvider.getBatteryPercent(batteryEntity);
-      if (battery != null) {
-        return Math.max(0, Math.min(100, battery));
-      }
-    }
-
-    // Fallback to entity's own battery attribute
-    const attrs = entity.attributes as {
-      battery?: number;
-      battery_level?: number;
-    };
-    const level = attrs.battery_level ?? attrs.battery;
-    if (level == null || Number.isNaN(Number(level))) {
-      return null;
-    }
-    return Number(level);
-  },
-});
 
 /**
  * Initial thermostat state extracted from Home Assistant entity.
@@ -78,7 +51,7 @@ const ClimateDeviceType = (
     additionalClusters.push(ClimateHumidityMeasurementServer);
   }
   if (hasBattery) {
-    additionalClusters.push(ClimatePowerSourceServer);
+    additionalClusters.push(DefaultPowerSourceServer);
   }
 
   // Use feature-specific thermostat server so controllers like Alexa
