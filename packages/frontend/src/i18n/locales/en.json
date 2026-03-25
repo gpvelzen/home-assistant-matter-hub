@@ -288,7 +288,21 @@
     "descending": "Descending",
     "connectedTo": "Connected to",
     "autoRecovery": "Auto Recovery",
-    "recoveryAttempts": "Recovery attempts"
+    "recoveryAttempts": "Recovery attempts",
+    "fabrics": "fabrics",
+    "networkDiagnostics": "Network Diagnostics",
+    "checksPassed": "passed",
+    "checksWarning": "warnings",
+    "checksFailed": "failed",
+    "hideDetails": "Hide details",
+    "showDetails": "Show details",
+    "allChecks": "All Checks",
+    "check": "Check",
+    "statusLabel": "Status",
+    "message": "Message",
+    "networkInterfaces": "Network Interfaces",
+    "interfaceName": "Interface",
+    "refresh": "Refresh"
   },
   "mapping": {
     "title": "Entity Mappings",
@@ -344,6 +358,7 @@
     "subscription": "Subscription",
     "bridgeStart": "Bridge Start",
     "bridgeStop": "Bridge Stop",
+    "entityWarning": "Warning",
     "filterEvents": "Filter event types",
     "clearEvents": "Clear all events",
     "noEvents": "No events match the current filters."

@@ -1,4 +1,8 @@
-import type { DiagnosticEventType } from "@home-assistant-matter-hub/common";
+import type {
+  DiagnosticBridgeInfo,
+  DiagnosticEventType,
+} from "@home-assistant-matter-hub/common";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -43,6 +47,7 @@ const eventTypeColors: Record<string, string> = {
   subscription_changed: "#9c27b0",
   bridge_started: "#00bcd4",
   bridge_stopped: "#795548",
+  entity_warning: "#ff9800",
 };
 
 const eventTypeLabelKeys: Record<string, string> = {
@@ -54,6 +59,7 @@ const eventTypeLabelKeys: Record<string, string> = {
   subscription_changed: "diagnostics.subscription",
   bridge_started: "diagnostics.bridgeStart",
   bridge_stopped: "diagnostics.bridgeStop",
+  entity_warning: "diagnostics.entityWarning",
 };
 
 function formatTime(ts: number): string {
@@ -243,68 +249,7 @@ export function LiveEventLog({
           <>
             <Grid container spacing={1} sx={{ mb: 2 }}>
               {sortedBridges.map((bridge) => (
-                <Grid size={{ xs: 12, sm: 6 }} key={bridge.bridgeId}>
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      p: 1.5,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      overflow: "hidden",
-                      minWidth: 0,
-                    }}
-                  >
-                    <Box sx={{ minWidth: 0, overflow: "hidden" }}>
-                      <Typography variant="body2" fontWeight={500} noWrap>
-                        {bridge.bridgeName}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        noWrap
-                      >
-                        {bridge.entityCount} devices · {bridge.sessionCount}{" "}
-                        sessions
-                      </Typography>
-                    </Box>
-                    <Stack
-                      direction="row"
-                      spacing={0.5}
-                      alignItems="center"
-                      flexWrap="wrap"
-                      justifyContent="flex-end"
-                      sx={{ flexShrink: 0, ml: 1 }}
-                    >
-                      {Object.entries(bridge.featureFlags)
-                        .filter(([, v]) => v)
-                        .map(([k]) => (
-                          <Chip
-                            key={k}
-                            label={k
-                              .replace(/^auto/, "")
-                              .replace(/([A-Z])/g, " $1")
-                              .trim()}
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontSize: "0.6rem", height: 18 }}
-                          />
-                        ))}
-                      <Chip
-                        label={bridge.status}
-                        size="small"
-                        color={
-                          bridge.status === "running"
-                            ? "success"
-                            : bridge.status === "failed"
-                              ? "error"
-                              : "default"
-                        }
-                        sx={{ height: 20 }}
-                      />
-                    </Stack>
-                  </Paper>
-                </Grid>
+                <BridgeSnapshotCard key={bridge.bridgeId} bridge={bridge} />
               ))}
             </Grid>
             <Divider sx={{ mb: 2 }} />
@@ -431,5 +376,123 @@ export function LiveEventLog({
         </Box>
       </CardContent>
     </Card>
+  );
+}
+
+function BridgeSnapshotCard({ bridge }: { bridge: DiagnosticBridgeInfo }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <Grid size={{ xs: 12, sm: 6 }}>
+      <Paper
+        variant="outlined"
+        sx={{ p: 1.5, overflow: "hidden", minWidth: 0 }}
+      >
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ cursor: "pointer" }}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          <Box sx={{ minWidth: 0, overflow: "hidden" }}>
+            <Typography variant="body2" fontWeight={500} noWrap>
+              {bridge.bridgeName}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {bridge.entityCount} devices · {bridge.sessionCount} sessions
+            </Typography>
+          </Box>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            alignItems="center"
+            flexWrap="wrap"
+            justifyContent="flex-end"
+            sx={{ flexShrink: 0, ml: 1 }}
+          >
+            {Object.entries(bridge.featureFlags)
+              .filter(([, v]) => v)
+              .map(([k]) => (
+                <Chip
+                  key={k}
+                  label={k
+                    .replace(/^auto/, "")
+                    .replace(/([A-Z])/g, " $1")
+                    .trim()}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontSize: "0.6rem", height: 18 }}
+                />
+              ))}
+            <Chip
+              label={bridge.status}
+              size="small"
+              color={
+                bridge.status === "running"
+                  ? "success"
+                  : bridge.status === "failed"
+                    ? "error"
+                    : "default"
+              }
+              sx={{ height: 20 }}
+            />
+            <ExpandMoreIcon
+              sx={{
+                transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.2s",
+                fontSize: 18,
+                color: "text.secondary",
+              }}
+            />
+          </Stack>
+        </Box>
+        <Collapse in={expanded}>
+          <Box sx={{ mt: 1, maxHeight: 200, overflow: "auto" }}>
+            {bridge.entities.map((entity) => (
+              <Box
+                key={entity.entityId}
+                sx={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 0.5,
+                  py: 0.3,
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontFamily: "monospace",
+                    fontSize: "0.68rem",
+                    minWidth: 180,
+                    flexShrink: 0,
+                    color: entity.available ? "text.primary" : "error.main",
+                  }}
+                  noWrap
+                >
+                  {entity.entityId}
+                </Typography>
+                <Box display="flex" gap={0.3} flexWrap="wrap">
+                  {entity.matterClusters.map((cluster) => (
+                    <Chip
+                      key={cluster}
+                      label={cluster}
+                      size="small"
+                      variant="outlined"
+                      sx={{
+                        fontSize: "0.58rem",
+                        height: 16,
+                        "& .MuiChip-label": { px: 0.5 },
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </Collapse>
+      </Paper>
+    </Grid>
   );
 }

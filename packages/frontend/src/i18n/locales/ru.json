@@ -288,7 +288,21 @@
     "descending": "По убыванию",
     "connectedTo": "Подключено к",
     "autoRecovery": "Автовосстановление",
-    "recoveryAttempts": "Попытки восстановления"
+    "recoveryAttempts": "Попытки восстановления",
+    "fabrics": "фабрик",
+    "networkDiagnostics": "Диагностика сети",
+    "checksPassed": "пройдено",
+    "checksWarning": "предупреждения",
+    "checksFailed": "ошибки",
+    "hideDetails": "Скрыть детали",
+    "showDetails": "Показать детали",
+    "allChecks": "Все проверки",
+    "check": "Проверка",
+    "statusLabel": "Статус",
+    "message": "Сообщение",
+    "networkInterfaces": "Сетевые интерфейсы",
+    "interfaceName": "Интерфейс",
+    "refresh": "Обновить"
   },
   "mapping": {
     "title": "Привязки объектов",
@@ -344,6 +358,7 @@
     "subscription": "Подписка",
     "bridgeStart": "Мост запущен",
     "bridgeStop": "Мост остановлен",
+    "entityWarning": "Предупреждение",
     "filterEvents": "Фильтр типов событий",
     "clearEvents": "Очистить все события",
     "noEvents": "Нет событий, соответствующих текущим фильтрам."

@@ -288,7 +288,21 @@
     "descending": "Azalan",
     "connectedTo": "Bağlı olduğu yer",
     "autoRecovery": "Otomatik kurtarma",
-    "recoveryAttempts": "Kurtarma denemeleri"
+    "recoveryAttempts": "Kurtarma denemeleri",
+    "fabrics": "fabric",
+    "networkDiagnostics": "Ağ Tanılama",
+    "checksPassed": "başarılı",
+    "checksWarning": "uyarılar",
+    "checksFailed": "başarısız",
+    "hideDetails": "Detayları gizle",
+    "showDetails": "Detayları göster",
+    "allChecks": "Tüm Kontroller",
+    "check": "Kontrol",
+    "statusLabel": "Durum",
+    "message": "Mesaj",
+    "networkInterfaces": "Ağ Arayüzleri",
+    "interfaceName": "Arayüz",
+    "refresh": "Yenile"
   },
   "mapping": {
     "title": "Eşleme",
@@ -344,6 +358,7 @@
     "subscription": "Abonelik",
     "bridgeStart": "Köprü başlatıldı",
     "bridgeStop": "Köprü durduruldu",
+    "entityWarning": "Uyarı",
     "filterEvents": "Olayları filtrele",
     "clearEvents": "Olayları temizle",
     "noEvents": "Olay yok"

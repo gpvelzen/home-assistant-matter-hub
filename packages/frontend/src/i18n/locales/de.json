@@ -288,7 +288,21 @@
     "descending": "Absteigend",
     "connectedTo": "Verbunden mit",
     "autoRecovery": "Auto-Wiederherstellung",
-    "recoveryAttempts": "Wiederherstellungsversuche"
+    "recoveryAttempts": "Wiederherstellungsversuche",
+    "fabrics": "Fabrics",
+    "networkDiagnostics": "Netzwerk-Diagnose",
+    "checksPassed": "bestanden",
+    "checksWarning": "Warnungen",
+    "checksFailed": "fehlgeschlagen",
+    "hideDetails": "Details ausblenden",
+    "showDetails": "Details anzeigen",
+    "allChecks": "Alle Prüfungen",
+    "check": "Prüfung",
+    "statusLabel": "Status",
+    "message": "Nachricht",
+    "networkInterfaces": "Netzwerkschnittstellen",
+    "interfaceName": "Schnittstelle",
+    "refresh": "Aktualisieren"
   },
   "mapping": {
     "title": "Entity-Zuordnungen",
@@ -423,6 +437,7 @@
     "subscription": "Abonnement",
     "bridgeStart": "Bridge gestartet",
     "bridgeStop": "Bridge gestoppt",
+    "entityWarning": "Warnung",
     "filterEvents": "Ereignistypen filtern",
     "clearEvents": "Alle Ereignisse löschen",
     "noEvents": "Keine Ereignisse entsprechen den aktuellen Filtern."

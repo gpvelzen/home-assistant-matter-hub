@@ -5,6 +5,7 @@ import {
 import type { EndpointType } from "@matter/main";
 import { DeviceTypeId } from "@matter/main/types";
 import type { HomeAssistantEntityBehavior } from "../../../behaviors/home-assistant-entity-behavior.js";
+import { diagnosticEventBus } from "../../../../services/diagnostics/diagnostic-event-bus.js";
 import { AirQualitySensorType } from "./devices/air-quality-sensor.js";
 import { BatterySensorType } from "./devices/battery-sensor.js";
 import { CarbonMonoxideSensorType } from "./devices/carbon-monoxide-sensor.js";
@@ -151,6 +152,16 @@ export function SensorDevice(
   }
   if (deviceClass === SensorDeviceClass.battery) {
     return BatterySensorType.set({ homeAssistantEntity });
+  }
+  if (deviceClass) {
+    diagnosticEventBus.emit(
+      "entity_warning",
+      `Sensor "${homeAssistantEntity.entity.entity_id}" has unsupported device_class "${deviceClass}" — skipped`,
+      {
+        entityId: homeAssistantEntity.entity.entity_id,
+        details: { device_class: deviceClass },
+      },
+    );
   }
   return undefined;
 }
