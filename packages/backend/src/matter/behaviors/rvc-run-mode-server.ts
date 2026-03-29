@@ -69,9 +69,25 @@ class RvcRunModeServerBase extends Base {
       ),
     });
 
-    // Reset currentArea when vacuum transitions to Idle (cleaning finished)
-    if (previousMode !== newMode && newMode === RvcSupportedRunMode.Idle) {
-      this.trySetCurrentArea(null);
+    if (previousMode !== newMode) {
+      if (newMode === RvcSupportedRunMode.Idle) {
+        // Reset currentArea when vacuum transitions to Idle (cleaning finished)
+        this.trySetCurrentArea(null);
+      } else if (newMode === RvcSupportedRunMode.Cleaning) {
+        // Restore currentArea when HA reports cleaning (e.g. after a brief
+        // docked state between command dispatch and vacuum actually starting)
+        try {
+          const serviceArea = this.agent.get(ServiceAreaBehavior);
+          if (
+            serviceArea.state.selectedAreas?.length > 0 &&
+            serviceArea.state.currentArea === null
+          ) {
+            this.trySetCurrentArea(serviceArea.state.selectedAreas[0]);
+          }
+        } catch {
+          // ServiceArea not available
+        }
+      }
     }
   }
 
@@ -136,6 +152,7 @@ class RvcRunModeServerBase extends Base {
         if (serviceArea.state.selectedAreas?.length > 0) {
           this.trySetCurrentArea(serviceArea.state.selectedAreas[0]);
           homeAssistant.callAction(this.state.config.start(void 0, this.agent));
+          this.state.currentMode = newMode;
           return {
             status: ModeBase.ModeChangeStatus.Success,
             statusText: "Starting room cleaning",
@@ -150,6 +167,7 @@ class RvcRunModeServerBase extends Base {
         homeAssistant.callAction(
           this.state.config.cleanRoom(newMode, this.agent),
         );
+        this.state.currentMode = newMode;
         return {
           status: ModeBase.ModeChangeStatus.Success,
           statusText: "Starting room cleaning",
@@ -181,6 +199,7 @@ class RvcRunModeServerBase extends Base {
         homeAssistant.callAction(this.state.config.pause(void 0, this.agent));
         break;
     }
+    this.state.currentMode = newMode;
     return {
       status: ModeBase.ModeChangeStatus.Success,
       statusText: "Successfully switched mode",
