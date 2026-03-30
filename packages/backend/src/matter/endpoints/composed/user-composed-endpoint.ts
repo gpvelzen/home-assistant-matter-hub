@@ -22,6 +22,17 @@ import { createLegacyEndpointType } from "../legacy/create-legacy-endpoint-type.
 
 const logger = Logger.get("UserComposedEndpoint");
 
+/**
+ * Strip BridgedDeviceBasicInformation from an endpoint type.
+ * Sub-endpoints in a composed device must not carry their own BasicInfo;
+ * only the parent BridgedNodeEndpoint provides it.
+ */
+function stripBasicInformation(type: EndpointType): EndpointType {
+  const behaviors = { ...type.behaviors };
+  delete (behaviors as Record<string, unknown>).bridgedDeviceBasicInformation;
+  return { ...type, behaviors };
+}
+
 function createEndpointId(entityId: string, customName?: string): string {
   const baseName = customName || entityId;
   return baseName.replace(/\./g, "_").replace(/\s+/g, "_");
@@ -120,7 +131,7 @@ export class UserComposedEndpoint extends Endpoint {
       return undefined;
     }
 
-    const primarySub = new Endpoint(primaryType, {
+    const primarySub = new Endpoint(stripBasicInformation(primaryType), {
       id: `${endpointId}_primary`,
     });
     parts.push(primarySub);
@@ -152,7 +163,7 @@ export class UserComposedEndpoint extends Endpoint {
         continue;
       }
 
-      const subEndpoint = new Endpoint(subType, {
+      const subEndpoint = new Endpoint(stripBasicInformation(subType), {
         id: `${endpointId}_sub_${i}`,
       });
       parts.push(subEndpoint);
