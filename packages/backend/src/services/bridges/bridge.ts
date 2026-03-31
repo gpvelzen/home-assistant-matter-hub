@@ -235,6 +235,15 @@ export class Bridge {
       await this.endpointManager.startPlugins();
       this.setStatus({ code: BridgeStatus.Running });
       this.startAutoForceSyncIfEnabled();
+
+      // Force sync immediately on startup to push current HA state to controllers
+      // before they reconnect and execute any queued commands
+      if (this.dataProvider.featureFlags?.autoForceSync) {
+        this.forceSync().catch((e) => {
+          this.log.warn("Startup force sync failed:", e);
+        });
+      }
+      
       this.wireSessionDiagnostics();
       logMemoryUsage(this.log, "bridge running");
       diagnosticEventBus.emit("bridge_started", `Bridge started`, {
