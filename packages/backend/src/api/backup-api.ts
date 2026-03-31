@@ -230,6 +230,9 @@ export function backupApi(
                     mopIntensityEntity: config.mopIntensityEntity,
                     valetudoIdentifier: config.valetudoIdentifier,
                     coverSwapOpenClose: config.coverSwapOpenClose,
+                    customServiceAreas: config.customServiceAreas,
+                    customFanSpeedTags: config.customFanSpeedTags,
+                    composedEntities: config.composedEntities,
                   });
                   mappingsRestored++;
                 }
@@ -402,6 +405,12 @@ export function backupApi(
                   energyEntity: config.energyEntity,
                   suctionLevelEntity: config.suctionLevelEntity,
                   mopIntensityEntity: config.mopIntensityEntity,
+                  temperatureEntity: config.temperatureEntity,
+                  valetudoIdentifier: config.valetudoIdentifier,
+                  coverSwapOpenClose: config.coverSwapOpenClose,
+                  customServiceAreas: config.customServiceAreas,
+                  customFanSpeedTags: config.customFanSpeedTags,
+                  composedEntities: config.composedEntities,
                 });
                 mappingsRestored++;
               }
