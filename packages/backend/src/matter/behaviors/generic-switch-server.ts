@@ -29,7 +29,7 @@ class GenericSwitchServerBase extends FeaturedBase {
   private handleEventChange() {
     const homeAssistant = this.agent.get(HomeAssistantEntityBehavior);
     const entity = homeAssistant.entity;
-    if (!entity?.state) return;
+    if (!entity?.state || !entity.state.attributes) return;
 
     const attrs = entity.state.attributes as EventDeviceAttributes;
     const eventType = attrs.event_type;

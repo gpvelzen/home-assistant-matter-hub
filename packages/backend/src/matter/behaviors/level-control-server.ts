@@ -77,7 +77,7 @@ export class LevelControlServerBase extends FeaturedBase {
   }
 
   private update(entity: HomeAssistantEntityInformation) {
-    if (!entity.state) {
+    if (!entity.state || !entity.state.attributes) {
       return;
     }
     const { state } = entity;
