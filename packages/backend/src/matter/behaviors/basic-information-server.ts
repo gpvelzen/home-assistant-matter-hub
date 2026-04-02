@@ -22,12 +22,15 @@ export class BasicInformationServer extends Base {
     const { basicInformation } = this.env.get(BridgeDataProvider);
     const homeAssistant = this.agent.get(HomeAssistantEntityBehavior);
     const device = entity.deviceRegistry;
+    const mapping = homeAssistant.state.mapping;
     applyPatchState(this.state, {
       vendorId: VendorId(basicInformation.vendorId),
       vendorName:
+        ellipse(32, mapping?.customVendorName) ??
         ellipse(32, device?.manufacturer) ??
         hash(32, basicInformation.vendorName),
       productName:
+        ellipse(32, mapping?.customProductName) ??
         ellipse(32, device?.model_id) ??
         ellipse(32, device?.model) ??
         hash(32, basicInformation.productName),

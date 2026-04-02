@@ -277,7 +277,11 @@
     "saved": "已为 {{entityId}} 保存映射。重启 Bridge 以应用更改。",
     "saveFailed": "无法保存映射：{{error}}",
     "deleted": "已删除 {{entityId}} 的映射。",
-    "deleteFailed": "无法删除映射。"
+    "deleteFailed": "无法删除映射。",
+    "customProductName": "自定义产品名称",
+    "customProductNameHelp": "覆盖报告给 Matter 控制器的产品名称（型号）。某些控制器（如 Aqara）会将此显示为设备名称。",
+    "customVendorName": "自定义厂商名称",
+    "customVendorNameHelp": "覆盖报告给 Matter 控制器的厂商/制造商名称。"
   },
   "languageSwitcher": {
     "disclaimer": "翻译可能不完整。",

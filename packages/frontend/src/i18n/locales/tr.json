@@ -327,7 +327,11 @@
     "loadFailed": "Yükleme başarısız",
     "noMappings": "Eşleme yok",
     "applying": "Uygulanıyor",
-    "applyCount": "{count} eşleme uygulanacak"
+    "applyCount": "{count} eşleme uygulanacak",
+    "customProductName": "Custom Product Name",
+    "customProductNameHelp": "Override the product name (model) reported to Matter controllers. Some controllers (e.g. Aqara) display this as the device name.",
+    "customVendorName": "Custom Vendor Name",
+    "customVendorNameHelp": "Override the vendor/manufacturer name reported to Matter controllers."
   },
   "notFound": {
     "title": "Sayfa bulunamadı",

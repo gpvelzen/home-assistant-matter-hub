@@ -277,7 +277,11 @@
     "saved": "บันทึกการแมปสำหรับ {{entityId}} แล้ว รีสตาร์ท Bridge เพื่อใช้การเปลี่ยนแปลง",
     "saveFailed": "ไม่สามารถบันทึกการแมป: {{error}}",
     "deleted": "ลบการแมปสำหรับ {{entityId}} แล้ว",
-    "deleteFailed": "ไม่สามารถลบการแมป"
+    "deleteFailed": "ไม่สามารถลบการแมป",
+    "customProductName": "Custom Product Name",
+    "customProductNameHelp": "Override the product name (model) reported to Matter controllers. Some controllers (e.g. Aqara) display this as the device name.",
+    "customVendorName": "Custom Vendor Name",
+    "customVendorNameHelp": "Override the vendor/manufacturer name reported to Matter controllers."
   },
   "languageSwitcher": {
     "disclaimer": "การแปลอาจไม่สมบูรณ์",

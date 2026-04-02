@@ -277,7 +277,11 @@
     "saved": "Mappatura salvata per {{entityId}}. Riavvia il bridge per applicare le modifiche.",
     "saveFailed": "Impossibile salvare la mappatura: {{error}}",
     "deleted": "Mappatura eliminata per {{entityId}}.",
-    "deleteFailed": "Impossibile eliminare la mappatura."
+    "deleteFailed": "Impossibile eliminare la mappatura.",
+    "customProductName": "Custom Product Name",
+    "customProductNameHelp": "Override the product name (model) reported to Matter controllers. Some controllers (e.g. Aqara) display this as the device name.",
+    "customVendorName": "Custom Vendor Name",
+    "customVendorNameHelp": "Override the vendor/manufacturer name reported to Matter controllers."
   },
   "languageSwitcher": {
     "disclaimer": "Le traduzioni potrebbero essere incomplete.",

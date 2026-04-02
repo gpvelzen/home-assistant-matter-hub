@@ -107,6 +107,8 @@ export class EntityMappingStorage extends Service {
       entityId: request.entityId,
       matterDeviceType: request.matterDeviceType,
       customName: request.customName?.trim() || undefined,
+      customProductName: request.customProductName?.trim() || undefined,
+      customVendorName: request.customVendorName?.trim() || undefined,
       disabled: request.disabled,
       filterLifeEntity: request.filterLifeEntity?.trim() || undefined,
       cleaningModeEntity: request.cleaningModeEntity?.trim() || undefined,
@@ -140,6 +142,8 @@ export class EntityMappingStorage extends Service {
     if (
       !config.matterDeviceType &&
       !config.customName &&
+      !config.customProductName &&
+      !config.customVendorName &&
       config.disabled !== true &&
       !config.filterLifeEntity &&
       !config.cleaningModeEntity &&

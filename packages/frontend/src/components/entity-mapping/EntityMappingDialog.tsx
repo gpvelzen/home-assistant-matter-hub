@@ -60,6 +60,8 @@ export function EntityMappingDialog({
     MatterDeviceType | ""
   >("");
   const [customName, setCustomName] = useState("");
+  const [customProductName, setCustomProductName] = useState("");
+  const [customVendorName, setCustomVendorName] = useState("");
   const [disabled, setDisabled] = useState(false);
   const [filterLifeEntity, setFilterLifeEntity] = useState("");
   const [cleaningModeEntity, setCleaningModeEntity] = useState("");
@@ -108,6 +110,8 @@ export function EntityMappingDialog({
       setEditEntityId(entityId);
       setMatterDeviceType(currentMapping?.matterDeviceType || "");
       setCustomName(currentMapping?.customName || "");
+      setCustomProductName(currentMapping?.customProductName || "");
+      setCustomVendorName(currentMapping?.customVendorName || "");
       setDisabled(currentMapping?.disabled || false);
       setFilterLifeEntity(currentMapping?.filterLifeEntity || "");
       setCleaningModeEntity(currentMapping?.cleaningModeEntity || "");
@@ -184,6 +188,8 @@ export function EntityMappingDialog({
       entityId: editEntityId.trim(),
       matterDeviceType: matterDeviceType || undefined,
       customName: customName.trim() || undefined,
+      customProductName: customProductName.trim() || undefined,
+      customVendorName: customVendorName.trim() || undefined,
       disabled,
       filterLifeEntity: filterLifeEntity.trim() || undefined,
       cleaningModeEntity: cleaningModeEntity.trim() || undefined,
@@ -217,6 +223,8 @@ export function EntityMappingDialog({
     editEntityId,
     matterDeviceType,
     customName,
+    customProductName,
+    customVendorName,
     disabled,
     filterLifeEntity,
     cleaningModeEntity,
@@ -348,6 +356,24 @@ export function EntityMappingDialog({
           value={customName}
           onChange={(e) => setCustomName(e.target.value)}
           helperText="Override the entity name shown in Matter controllers"
+        />
+
+        <TextField
+          fullWidth
+          margin="normal"
+          label={t("mapping.customProductName")}
+          value={customProductName}
+          onChange={(e) => setCustomProductName(e.target.value)}
+          helperText={t("mapping.customProductNameHelp")}
+        />
+
+        <TextField
+          fullWidth
+          margin="normal"
+          label={t("mapping.customVendorName")}
+          value={customVendorName}
+          onChange={(e) => setCustomVendorName(e.target.value)}
+          helperText={t("mapping.customVendorNameHelp")}
         />
 
         {showFilterLifeField && (

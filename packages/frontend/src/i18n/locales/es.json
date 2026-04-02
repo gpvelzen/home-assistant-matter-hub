@@ -277,7 +277,11 @@
     "saved": "Mapeo guardado para {{entityId}}. Reinicia el bridge para aplicar los cambios.",
     "saveFailed": "No se pudo guardar el mapeo: {{error}}",
     "deleted": "Mapeo eliminado para {{entityId}}.",
-    "deleteFailed": "No se pudo eliminar el mapeo."
+    "deleteFailed": "No se pudo eliminar el mapeo.",
+    "customProductName": "Custom Product Name",
+    "customProductNameHelp": "Override the product name (model) reported to Matter controllers. Some controllers (e.g. Aqara) display this as the device name.",
+    "customVendorName": "Custom Vendor Name",
+    "customVendorNameHelp": "Override the vendor/manufacturer name reported to Matter controllers."
   },
   "languageSwitcher": {
     "disclaimer": "Las traducciones pueden estar incompletas.",

@@ -327,7 +327,11 @@
     "loadFailed": "Не удалось загрузить привязки объектов",
     "noMappings": "Пользовательские привязки не настроены. Используйте привязки для переопределения типов Matter-устройств, установки пользовательских имён или отключения отдельных объектов.",
     "applying": "Применение...",
-    "applyCount": "Применить {{count}} привязку(и)"
+    "applyCount": "Применить {{count}} привязку(и)",
+    "customProductName": "Custom Product Name",
+    "customProductNameHelp": "Override the product name (model) reported to Matter controllers. Some controllers (e.g. Aqara) display this as the device name.",
+    "customVendorName": "Custom Vendor Name",
+    "customVendorNameHelp": "Override the vendor/manufacturer name reported to Matter controllers."
   },
   "notFound": {
     "title": "Страница не найдена",

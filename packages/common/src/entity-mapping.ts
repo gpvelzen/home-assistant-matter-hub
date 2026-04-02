@@ -54,6 +54,18 @@ export interface EntityMappingConfig {
   readonly entityId: string;
   readonly matterDeviceType?: MatterDeviceType;
   readonly customName?: string;
+  /**
+   * Optional: Override the productName reported to Matter controllers.
+   * Some controllers (e.g. Aqara) display productName as the device name
+   * instead of nodeLabel. When set, this takes priority over the HA device
+   * registry model/model_id values.
+   */
+  readonly customProductName?: string;
+  /**
+   * Optional: Override the vendorName reported to Matter controllers.
+   * When set, this takes priority over the HA device registry manufacturer.
+   */
+  readonly customVendorName?: string;
   readonly disabled?: boolean;
   /**
    * Optional: Array of additional entities to compose into this device.
@@ -203,6 +215,8 @@ export interface EntityMappingRequest {
   readonly entityId: string;
   readonly matterDeviceType?: MatterDeviceType;
   readonly customName?: string;
+  readonly customProductName?: string;
+  readonly customVendorName?: string;
   readonly disabled?: boolean;
   readonly filterLifeEntity?: string;
   readonly cleaningModeEntity?: string;

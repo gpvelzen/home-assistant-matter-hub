@@ -212,21 +212,13 @@ const matterDeviceTypeFactories: Partial<
   >
 > = {
   on_off_light: (ha) =>
-    OnOffLightType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    OnOffLightType.set({ homeAssistantEntity: ha }),
   dimmable_light: (ha) =>
-    DimmableLightType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    DimmableLightType.set({ homeAssistantEntity: ha }),
   color_temperature_light: (ha) =>
-    ColorTemperatureLightType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    ColorTemperatureLightType.set({ homeAssistantEntity: ha }),
   extended_color_light: (ha) =>
-    ExtendedColorLightType(true, true).set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    ExtendedColorLightType(true, true).set({ homeAssistantEntity: ha }),
   on_off_plugin_unit: (ha) => {
     const domain = ha.entity.entity_id.split(".")[0];
     if (domain === "alarm_control_panel") {
@@ -235,9 +227,7 @@ const matterDeviceTypeFactories: Partial<
     return SwitchDevice(ha);
   },
   dimmable_plugin_unit: (ha) =>
-    DimmablePlugInUnitType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    DimmablePlugInUnitType.set({ homeAssistantEntity: ha }),
   on_off_switch: SwitchDevice,
   door_lock: LockDevice,
   window_covering: CoverDevice,
@@ -249,96 +239,46 @@ const matterDeviceTypeFactories: Partial<
   speaker: MediaPlayerDevice,
   basic_video_player: VideoPlayerDevice,
   humidity_sensor: (ha) =>
-    HumiditySensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    HumiditySensorType.set({ homeAssistantEntity: ha }),
   temperature_sensor: (ha) =>
-    TemperatureSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    TemperatureSensorType.set({ homeAssistantEntity: ha }),
   pressure_sensor: (ha) =>
-    PressureSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    PressureSensorType.set({ homeAssistantEntity: ha }),
   light_sensor: (ha) =>
-    IlluminanceSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
-  flow_sensor: (ha) =>
-    FlowSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    IlluminanceSensorType.set({ homeAssistantEntity: ha }),
+  flow_sensor: (ha) => FlowSensorType.set({ homeAssistantEntity: ha }),
   air_quality_sensor: (ha) =>
-    AirQualitySensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    AirQualitySensorType.set({ homeAssistantEntity: ha }),
   battery_storage: (ha) =>
-    BatterySensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
-  tvoc_sensor: (ha) =>
-    TvocSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    BatterySensorType.set({ homeAssistantEntity: ha }),
+  tvoc_sensor: (ha) => TvocSensorType.set({ homeAssistantEntity: ha }),
   carbon_monoxide_sensor: (ha) =>
-    CarbonMonoxideSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    CarbonMonoxideSensorType.set({ homeAssistantEntity: ha }),
   nitrogen_dioxide_sensor: (ha) =>
-    NitrogenDioxideSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
-  ozone_sensor: (ha) =>
-    OzoneSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    NitrogenDioxideSensorType.set({ homeAssistantEntity: ha }),
+  ozone_sensor: (ha) => OzoneSensorType.set({ homeAssistantEntity: ha }),
   formaldehyde_sensor: (ha) =>
-    FormaldehydeSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
-  radon_sensor: (ha) =>
-    RadonSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
-  pm1_sensor: (ha) =>
-    Pm1SensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    FormaldehydeSensorType.set({ homeAssistantEntity: ha }),
+  radon_sensor: (ha) => RadonSensorType.set({ homeAssistantEntity: ha }),
+  pm1_sensor: (ha) => Pm1SensorType.set({ homeAssistantEntity: ha }),
   electrical_sensor: (ha) =>
-    ElectricalSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    ElectricalSensorType.set({ homeAssistantEntity: ha }),
   contact_sensor: (ha) =>
-    ContactSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    ContactSensorType.set({ homeAssistantEntity: ha }),
   motion_sensor: (ha) =>
-    MotionSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    MotionSensorType.set({ homeAssistantEntity: ha }),
   occupancy_sensor: (ha) =>
-    OccupancySensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    OccupancySensorType.set({ homeAssistantEntity: ha }),
   mode_select: SelectDevice,
   water_valve: ValveDevice,
   pump: PumpEndpoint,
-  rain_sensor: (ha) =>
-    RainSensorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+  rain_sensor: (ha) => RainSensorType.set({ homeAssistantEntity: ha }),
   water_heater: WaterHeaterDevice,
   generic_switch: EventDevice,
   smoke_co_alarm: (ha) =>
-    SmokeAlarmType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    SmokeAlarmType.set({ homeAssistantEntity: ha }),
   water_freeze_detector: (ha) =>
-    WaterFreezeDetectorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    WaterFreezeDetectorType.set({ homeAssistantEntity: ha }),
   water_leak_detector: (ha) =>
-    WaterLeakDetectorType.set({
-      homeAssistantEntity: { entity: ha.entity, customName: ha.customName },
-    }),
+    WaterLeakDetectorType.set({ homeAssistantEntity: ha }),
 };
