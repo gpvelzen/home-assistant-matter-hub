@@ -95,7 +95,7 @@ If crashes persist:
 4. For VMs (`qemux86-64`): increase RAM allocation to at least 4 GB
 5. Consider using a device with more RAM
 
-See [#190](https://github.com/RiDDiX/home-assistant-matter-hub/issues/190) and [#141](https://github.com/RiDDiX/home-assistant-matter-hub/issues/141) for details.
+See the [Low-Resource Devices Guide](./guides/low-resource-devices.md) for detailed setup recommendations, and [#190](https://github.com/RiDDiX/home-assistant-matter-hub/issues/190) and [#141](https://github.com/RiDDiX/home-assistant-matter-hub/issues/141) for details.
 
 ## Alexa loses connection after a few hours
 

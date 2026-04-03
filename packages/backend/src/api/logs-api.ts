@@ -1,3 +1,4 @@
+import os from "node:os";
 import express from "express";
 import type { LoggerService } from "../core/app/logger.js";
 
@@ -13,9 +14,13 @@ interface LogBuffer {
   maxSize: number;
 }
 
+// Use a smaller log buffer on systems with limited memory to reduce overhead.
+const totalMemMB = Math.round(os.totalmem() / 1024 / 1024);
+const defaultMaxSize = totalMemMB < 2048 ? 200 : 1000;
+
 export const logBuffer: LogBuffer = {
   entries: [],
-  maxSize: 1000,
+  maxSize: defaultMaxSize,
 };
 
 export function addLogEntry(entry: LogEntry) {

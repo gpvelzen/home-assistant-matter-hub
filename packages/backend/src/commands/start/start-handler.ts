@@ -1,3 +1,4 @@
+import { Logger } from "@matter/general";
 import * as ws from "ws";
 import type { ArgumentsCamelCase } from "yargs";
 import { WebApi } from "../../api/web-api.js";
@@ -9,6 +10,7 @@ import { BackupService } from "../../services/backup/backup-service.js";
 import { BridgeService } from "../../services/bridges/bridge-service.js";
 import { EntityIsolationService } from "../../services/bridges/entity-isolation-service.js";
 import { HomeAssistantRegistry } from "../../services/home-assistant/home-assistant-registry.js";
+import { logStartupMemoryGuard } from "../../utils/log-memory.js";
 import type { StartOptions } from "./start-options.js";
 
 function extractErrorMessage(error: unknown): string {
@@ -126,6 +128,11 @@ export async function startHandler(
 
   const options = new Options({ ...startOptions, webUiDist });
   const rootEnv = configureDefaultEnvironment(options);
+
+  // Log system memory early so low-resource devices get a warning before
+  // heavy initialization (Matter.js, HA registry, bridges) begins.
+  logStartupMemoryGuard(Logger.get("Startup"));
+
   const appEnvironment = await AppEnvironment.create(rootEnv, options);
 
   // Register final error handlers AFTER Matter.js initialization
