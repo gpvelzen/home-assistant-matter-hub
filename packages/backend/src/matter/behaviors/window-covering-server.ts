@@ -87,6 +87,20 @@ export class WindowCoveringServerBase extends FeaturedBase {
   private static readonly DEBOUNCE_SUBSEQUENT_MS = 150;
   private static readonly COMMAND_SEQUENCE_THRESHOLD_MS = 600;
 
+  override async [Symbol.asyncDispose]() {
+    if (this.liftDebounceTimer) {
+      clearTimeout(this.liftDebounceTimer);
+      this.liftDebounceTimer = null;
+    }
+    if (this.tiltDebounceTimer) {
+      clearTimeout(this.tiltDebounceTimer);
+      this.tiltDebounceTimer = null;
+    }
+    this.pendingLiftAction = null;
+    this.pendingTiltAction = null;
+    await super[Symbol.asyncDispose]();
+  }
+
   override async initialize() {
     // Set default values BEFORE super.initialize() to prevent validation errors.
     // WindowCovering with PositionAware features requires valid position values.

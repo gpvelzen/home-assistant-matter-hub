@@ -59,6 +59,13 @@ export class ColorControlServerBase extends FeaturedBase {
   declare state: ColorControlServerBase.State;
   private pendingTransitionTime: number | undefined;
 
+  override async [Symbol.asyncDispose]() {
+    const entityId = this.agent.get(HomeAssistantEntityBehavior).entityId;
+    optimisticColorState.delete(entityId);
+    pendingColorStaging.delete(entityId);
+    await super[Symbol.asyncDispose]();
+  }
+
   override async initialize() {
     // CRITICAL: Set default values BEFORE super.initialize() to prevent validation errors.
     // Matter.js validates ColorTemperature attributes during initialization.

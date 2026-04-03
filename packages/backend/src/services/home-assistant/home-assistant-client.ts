@@ -45,43 +45,44 @@ export class HomeAssistantClient extends Service {
   private async createConnection(
     props: HomeAssistantClientProps,
   ): Promise<Connection> {
-    try {
-      const connection = await createConnection({
-        auth: createLongLivedTokenAuth(
-          props.url.replace(/\/$/, ""),
-          props.accessToken,
-        ),
-      });
-      await this.waitForHomeAssistantToBeUpAndRunning(connection);
-      return connection;
-    } catch (reason: unknown) {
-      return this.handleInitializationError(reason, props);
+    const maxConnectAttempts = 60; // 5 minutes with 5s delay
+    for (let attempt = 1; attempt <= maxConnectAttempts; attempt++) {
+      try {
+        const connection = await createConnection({
+          auth: createLongLivedTokenAuth(
+            props.url.replace(/\/$/, ""),
+            props.accessToken,
+          ),
+        });
+        await this.waitForHomeAssistantToBeUpAndRunning(connection);
+        return connection;
+      } catch (reason: unknown) {
+        if (reason === ERR_CANNOT_CONNECT) {
+          this.log.warnCtx("Unable to connect to Home Assistant, retrying...", {
+            url: props.url,
+            attempt,
+            maxAttempts: maxConnectAttempts,
+            retryDelayMs: 5000,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          continue;
+        }
+        if (reason === ERR_INVALID_AUTH) {
+          this.log.errorCtx(
+            "Authentication failed",
+            new Error("Invalid authentication credentials"),
+            { url: props.url },
+          );
+          throw new Error(
+            "Authentication failed while connecting to home assistant",
+          );
+        }
+        throw new Error(`Unable to connect to home assistant: ${reason}`);
+      }
     }
-  }
-
-  private async handleInitializationError(
-    reason: unknown,
-    props: HomeAssistantClientProps,
-  ): Promise<Connection> {
-    if (reason === ERR_CANNOT_CONNECT) {
-      this.log.warnCtx("Unable to connect to Home Assistant, retrying...", {
-        url: props.url,
-        retryDelayMs: 5000,
-      });
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      return this.createConnection(props);
-    }
-    if (reason === ERR_INVALID_AUTH) {
-      this.log.errorCtx(
-        "Authentication failed",
-        new Error("Invalid authentication credentials"),
-        { url: props.url },
-      );
-      throw new Error(
-        "Authentication failed while connecting to home assistant",
-      );
-    }
-    throw new Error(`Unable to connect to home assistant: ${reason}`);
+    throw new Error(
+      `Failed to connect to Home Assistant at ${props.url} after ${maxConnectAttempts} attempts (5 minutes)`,
+    );
   }
 
   private async waitForHomeAssistantToBeUpAndRunning(
@@ -109,8 +110,15 @@ export class HomeAssistantClient extends Service {
       return state;
     };
 
+    const maxWaitAttempts = 120; // 10 minutes with 5s delay
     let state: string | undefined;
+    let waitAttempt = 0;
     while (state !== "RUNNING") {
+      if (++waitAttempt > maxWaitAttempts) {
+        throw new Error(
+          `Home Assistant did not reach RUNNING state within 10 minutes (last state: ${state ?? "unknown"})`,
+        );
+      }
       await new Promise((resolve) => setTimeout(resolve, 5000));
       state = await getState();
     }
