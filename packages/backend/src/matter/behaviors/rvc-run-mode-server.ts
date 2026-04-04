@@ -141,14 +141,36 @@ class RvcRunModeServerBase extends Base {
       const roomName = roomState.state;
 
       let matchedAreaId: number | null = null;
+
+      // Strategy 1: Direct segmentId → activeAreas match.
+      // Works when areaId === room_id (e.g. Dreame floor 0).
       if (segmentId != null) {
-        // segment/room ID maps directly to areaId for numeric room IDs
         if (this.activeAreas.includes(segmentId)) {
           matchedAreaId = segmentId;
         }
       }
+
+      // Strategy 2: Look up segmentId in supportedAreas to find the
+      // corresponding areaId. Dreame multi-floor vacuums offset room IDs
+      // per floor (areaId = floorIndex * 10000 + room_id), so the raw
+      // sensor room_id won't match activeAreas directly for floor > 0.
+      // Also handles cases where areaId is a hash of a string room ID.
+      if (matchedAreaId === null && segmentId != null) {
+        for (const area of serviceArea.state.supportedAreas) {
+          // areaId % 10000 recovers the original per-floor room_id
+          // for Dreame multi-floor; for single-floor, areaId === room_id.
+          if (
+            this.activeAreas.includes(area.areaId) &&
+            area.areaId % 10000 === segmentId
+          ) {
+            matchedAreaId = area.areaId;
+            break;
+          }
+        }
+      }
+
+      // Strategy 3: Match by location name in supportedAreas.
       if (matchedAreaId === null && roomName) {
-        // Fallback: match by location name in supportedAreas
         const area = serviceArea.state.supportedAreas.find(
           (a) =>
             a.areaInfo.locationInfo?.locationName?.toLowerCase() ===
@@ -160,9 +182,10 @@ class RvcRunModeServerBase extends Base {
       }
 
       if (matchedAreaId === null) {
-        logger.debug(
+        logger.info(
           `currentRoom sensor: no match for "${roomName}" (segmentId=${segmentId}), ` +
-            `activeAreas=[${this.activeAreas.join(", ")}]`,
+            `activeAreas=[${this.activeAreas.join(", ")}], ` +
+            `supportedAreas=[${serviceArea.state.supportedAreas.map((a) => `${a.areaId}:${a.areaInfo.locationInfo?.locationName}`).join(", ")}]`,
         );
         return;
       }
@@ -174,14 +197,18 @@ class RvcRunModeServerBase extends Base {
       }
       this.lastCurrentArea = matchedAreaId;
 
-      logger.debug(
-        `currentRoom sensor: area ${matchedAreaId} ("${roomName}"), ` +
+      logger.info(
+        `currentRoom sensor: transition to area ${matchedAreaId} ("${roomName}"), ` +
           `completed: [${[...this.completedAreas].join(", ")}]`,
       );
 
       this.trySetCurrentArea(matchedAreaId);
-    } catch {
-      // EntityStateProvider or ServiceArea not available
+    } catch (e) {
+      // Only suppress expected errors (EntityStateProvider or ServiceArea not available)
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes("No provider for") && !msg.includes("not supported")) {
+        logger.warn(`currentRoom sensor update failed: ${msg}`);
+      }
     }
   }
 
