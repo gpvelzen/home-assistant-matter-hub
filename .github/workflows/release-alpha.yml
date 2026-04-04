@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - alpha
+    paths-ignore:
+      - '*.md'
+      - 'docs-site/**'
+      - '.github/workflows/docs.yml'
 
 permissions:
   contents: read
