@@ -83,14 +83,18 @@ class RvcRunModeServerBase extends Base {
 
     if (previousMode !== newMode) {
       if (newMode === RvcSupportedRunMode.Idle) {
-        // Mark all areas as Completed before clearing session state
+        // Mark all areas as Completed and reset per-room tracking.
+        // Keep activeAreas intact — Dreame (and other vacuums) may
+        // briefly transition through Idle between rooms, and the
+        // Cleaning restore below needs activeAreas to recover.
+        // activeAreas is overwritten on the next changeToMode call.
         this.trySetCurrentArea(null);
         this.completedAreas.clear();
         this.lastCurrentArea = null;
-        this.activeAreas = [];
       } else if (newMode === RvcSupportedRunMode.Cleaning) {
         // Restore currentArea when HA reports cleaning (e.g. after a brief
-        // docked state between command dispatch and vacuum actually starting)
+        // docked state between command dispatch and vacuum actually starting,
+        // or when the vacuum transitions between rooms via a non-cleaning state)
         if (this.activeAreas.length > 0 && this.lastCurrentArea === null) {
           this.trySetCurrentArea(this.activeAreas[0]);
         }
@@ -123,14 +127,18 @@ class RvcRunModeServerBase extends Base {
 
       const serviceArea = this.agent.get(ServiceAreaBehavior);
 
-      // Match by segment_id attribute (numeric, preferred) or by room name
-      const segmentId = (roomState.attributes as { segment_id?: number })
-        ?.segment_id;
+      // Match by numeric room/segment ID (preferred) or by room name.
+      // Dreame sensors use "room_id", others may use "segment_id".
+      const sensorAttrs = roomState.attributes as {
+        segment_id?: number;
+        room_id?: number;
+      };
+      const segmentId = sensorAttrs.segment_id ?? sensorAttrs.room_id;
       const roomName = roomState.state;
 
       let matchedAreaId: number | null = null;
       if (segmentId != null) {
-        // segment_id maps directly to areaId for numeric room IDs
+        // segment/room ID maps directly to areaId for numeric room IDs
         if (this.activeAreas.includes(segmentId)) {
           matchedAreaId = segmentId;
         }
@@ -147,7 +155,13 @@ class RvcRunModeServerBase extends Base {
         }
       }
 
-      if (matchedAreaId === null) return;
+      if (matchedAreaId === null) {
+        logger.debug(
+          `currentRoom sensor: no match for "${roomName}" (segmentId=${segmentId}), ` +
+            `activeAreas=[${this.activeAreas.join(", ")}]`,
+        );
+        return;
+      }
       if (matchedAreaId === this.lastCurrentArea) return;
 
       // Room transition detected — mark previous area as completed
@@ -314,7 +328,11 @@ class RvcRunModeServerBase extends Base {
         break;
       }
       case RvcSupportedRunMode.Idle:
+        // Explicit user command to stop — clear session state
         this.trySetCurrentArea(null);
+        this.completedAreas.clear();
+        this.lastCurrentArea = null;
+        this.activeAreas = [];
         homeAssistant.callAction(
           this.state.config.returnToBase(void 0, this.agent),
         );
