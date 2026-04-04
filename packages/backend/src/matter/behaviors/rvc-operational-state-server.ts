@@ -70,15 +70,19 @@ class RvcOperationalStateServerBase extends Base {
     );
     const previousState = this.state.operationalState;
 
-    applyPatchState(this.state, {
-      operationalState: newState,
-      operationalError: {
-        errorStateId:
-          newState === OperationalState.Error
-            ? ErrorState.Stuck
-            : ErrorState.NoError,
+    applyPatchState(
+      this.state,
+      {
+        operationalState: newState,
+        operationalError: {
+          errorStateId:
+            newState === OperationalState.Error
+              ? ErrorState.Stuck
+              : ErrorState.NoError,
+        },
       },
-    });
+      { force: true },
+    );
 
     // Emit OperationCompletion event when transitioning from an active state
     // (Running, SeekingCharger) to an inactive state (Docked, Stopped, Paused).

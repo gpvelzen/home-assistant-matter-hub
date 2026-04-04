@@ -73,13 +73,17 @@ class RvcRunModeServerBase extends Base {
     const previousMode = this.state.currentMode;
     const newMode = this.state.config.getCurrentMode(entity.state, this.agent);
 
-    applyPatchState(this.state, {
-      currentMode: newMode,
-      supportedModes: this.state.config.getSupportedModes(
-        entity.state,
-        this.agent,
-      ),
-    });
+    applyPatchState(
+      this.state,
+      {
+        currentMode: newMode,
+        supportedModes: this.state.config.getSupportedModes(
+          entity.state,
+          this.agent,
+        ),
+      },
+      { force: true },
+    );
 
     if (previousMode !== newMode) {
       if (newMode === RvcSupportedRunMode.Idle) {

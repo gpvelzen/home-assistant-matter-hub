@@ -262,6 +262,8 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
 
   private lastState?: HomeAssistantEntityState;
   private pendingMappedChange = false;
+  /** Timestamp of the last non-empty state push to matter.js */
+  private lastNonEmptyPush = Date.now();
   private readonly flushUpdate: ReturnType<typeof debounce>;
 
   private constructor(
@@ -290,13 +292,25 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
     // even when the actual device state/attributes are identical.
     // Skipping these prevents unnecessary Matter subscription reports
     // and reduces MRP traffic that can cause session loss.
-    if (
+    const stateUnchanged =
       !mappedChanged &&
       state.state === this.lastState?.state &&
       JSON.stringify(state.attributes) ===
-        JSON.stringify(this.lastState?.attributes)
-    ) {
-      return;
+        JSON.stringify(this.lastState?.attributes);
+
+    if (stateUnchanged) {
+      // Periodic keepalive: Apple Home (iOS) shows "Updating..." when a
+      // subscription only carries empty heartbeats. Force a non-empty
+      // report every 60 s so the Apple TV cache stays fresh and the
+      // iPhone sees the device as responsive.
+      const now = Date.now();
+      if (now - this.lastNonEmptyPush < 60_000) {
+        return;
+      }
+      this.lastNonEmptyPush = now;
+      this.pendingMappedChange = true;
+    } else {
+      this.lastNonEmptyPush = Date.now();
     }
 
     if (mappedChanged) {
