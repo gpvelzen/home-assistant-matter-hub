@@ -262,9 +262,11 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
 
   private lastState?: HomeAssistantEntityState;
   private pendingMappedChange = false;
-  /** Timestamp of the last non-empty state push to matter.js */
-  private lastNonEmptyPush = Date.now();
   private readonly flushUpdate: ReturnType<typeof debounce>;
+  /** Periodic keepalive timer that re-pushes the last known state so
+   *  Apple Home (iOS) doesn't show "Updating..." due to stale
+   *  subscription data when the vacuum is idle and no HA events fire. */
+  private keepaliveTimer?: ReturnType<typeof setInterval>;
 
   private constructor(
     type: EndpointType,
@@ -277,9 +279,20 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
     // HA sends vacuum state updates every 5-10s even when unchanged.
     // Without debouncing, each triggers a separate Matter.js transaction.
     this.flushUpdate = debounce(this.flushPendingUpdate.bind(this), 50);
+
+    this.keepaliveTimer = setInterval(() => {
+      if (this.lastState) {
+        this.pendingMappedChange = true;
+        this.flushUpdate(this.lastState);
+      }
+    }, 55_000);
   }
 
   override async delete() {
+    if (this.keepaliveTimer) {
+      clearInterval(this.keepaliveTimer);
+      this.keepaliveTimer = undefined;
+    }
     this.flushUpdate.clear();
     await super.delete();
   }
@@ -292,25 +305,13 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
     // even when the actual device state/attributes are identical.
     // Skipping these prevents unnecessary Matter subscription reports
     // and reduces MRP traffic that can cause session loss.
-    const stateUnchanged =
+    if (
       !mappedChanged &&
       state.state === this.lastState?.state &&
       JSON.stringify(state.attributes) ===
-        JSON.stringify(this.lastState?.attributes);
-
-    if (stateUnchanged) {
-      // Periodic keepalive: Apple Home (iOS) shows "Updating..." when a
-      // subscription only carries empty heartbeats. Force a non-empty
-      // report every 60 s so the Apple TV cache stays fresh and the
-      // iPhone sees the device as responsive.
-      const now = Date.now();
-      if (now - this.lastNonEmptyPush < 60_000) {
-        return;
-      }
-      this.lastNonEmptyPush = now;
-      this.pendingMappedChange = true;
-    } else {
-      this.lastNonEmptyPush = Date.now();
+        JSON.stringify(this.lastState?.attributes)
+    ) {
+      return;
     }
 
     if (mappedChanged) {
