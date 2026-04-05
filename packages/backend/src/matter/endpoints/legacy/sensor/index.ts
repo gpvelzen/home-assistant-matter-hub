@@ -97,7 +97,14 @@ export function SensorDevice(
     }
     return TemperatureSensorType.set({ homeAssistantEntity });
   }
-  if (deviceClass === SensorDeviceClass.humidity) {
+  if (
+    deviceClass === SensorDeviceClass.humidity ||
+    deviceClass === SensorDeviceClass.moisture
+  ) {
+    // HA's "moisture" sensor device class (e.g. soil moisture, %) has the
+    // same 0-100 % semantics as Matter's RelativeHumidityMeasurement. Map it
+    // to the HumiditySensor device type so it is exposed to controllers
+    // instead of being skipped (#273).
     return HumiditySensorType.set({ homeAssistantEntity });
   }
   if (deviceClass === SensorDeviceClass.illuminance) {

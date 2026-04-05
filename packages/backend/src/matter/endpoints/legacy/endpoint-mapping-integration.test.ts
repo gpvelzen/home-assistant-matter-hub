@@ -517,6 +517,16 @@ describe("endpoint mapping integration", () => {
       expect(type.behaviors).toHaveProperty("relativeHumidityMeasurement");
     });
 
+    it("moisture sensor is exposed as humidity sensor (#273)", () => {
+      const entity = createEntity<SensorDeviceAttributes>(
+        "sensor.beh9_moist",
+        "42",
+        { device_class: SensorDeviceClass.moisture },
+      );
+      const { type } = createAndValidate(entity);
+      expect(type.behaviors).toHaveProperty("relativeHumidityMeasurement");
+    });
+
     it("contact sensor has booleanState behavior", () => {
       const entity = createEntity<BinarySensorDeviceAttributes>(
         "binary_sensor.beh10",
