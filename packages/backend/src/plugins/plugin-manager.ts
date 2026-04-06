@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { Logger } from "@matter/general";
 import { getSupportedPluginDeviceTypes } from "./plugin-device-factory.js";
+import type { PluginRegistry } from "./plugin-registry.js";
 import { FilePluginStorage } from "./plugin-storage.js";
 import {
   type CircuitBreakerState,
@@ -65,9 +66,11 @@ interface PluginInstance {
 export class PluginManager {
   private readonly instances = new Map<string, PluginInstance>();
   private readonly domainMappings = new Map<string, PluginDomainMapping>();
+  private readonly domainMappingOwners = new Map<string, string>();
   private readonly storageDir: string;
   private readonly bridgeId: string;
   private readonly runner = new SafePluginRunner();
+  private registry?: PluginRegistry;
 
   /** Callback invoked when a plugin registers a new device */
   onDeviceRegistered?: (
@@ -92,6 +95,10 @@ export class PluginManager {
   constructor(bridgeId: string, storageDir: string) {
     this.bridgeId = bridgeId;
     this.storageDir = storageDir;
+  }
+
+  setRegistry(registry: PluginRegistry) {
+    this.registry = registry;
   }
 
   /**
@@ -261,6 +268,7 @@ export class PluginManager {
           );
         }
         this.domainMappings.set(mapping.domain, mapping);
+        this.domainMappingOwners.set(mapping.domain, plugin.name);
         pluginLogger.info(
           `Registered domain mapping: ${mapping.domain} → ${mapping.matterDeviceType}`,
         );
@@ -381,6 +389,12 @@ export class PluginManager {
     if (instance) {
       instance.metadata.enabled = false;
     }
+    for (const [domain, owner] of this.domainMappingOwners) {
+      if (owner === pluginName) {
+        this.domainMappings.delete(domain);
+        this.domainMappingOwners.delete(domain);
+      }
+    }
   }
 
   enablePlugin(pluginName: string): void {
@@ -408,6 +422,7 @@ export class PluginManager {
     const instance = this.instances.get(pluginName);
     if (!instance) return false;
     instance.metadata.config = config;
+    this.registry?.updateConfig(pluginName, config);
     if (instance.plugin.onConfigChanged) {
       await this.runner.run(pluginName, "onConfigChanged", () =>
         instance.plugin.onConfigChanged!(config),

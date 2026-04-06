@@ -67,6 +67,7 @@ export class BridgeEnvironment extends EnvironmentBase {
     if (this.storageLocation) {
       pluginManager = new PluginManager(bridgeId, this.storageLocation);
       pluginRegistry = new PluginRegistry(this.storageLocation);
+      pluginManager.setRegistry(pluginRegistry);
       pluginInstaller = new PluginInstaller(this.storageLocation);
     }
 
