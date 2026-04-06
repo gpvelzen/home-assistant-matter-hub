@@ -9,9 +9,12 @@ export interface LogEntry {
   context?: Record<string, unknown>;
 }
 
+type LogListener = (entry: LogEntry) => void;
+
 interface LogBuffer {
   entries: LogEntry[];
   maxSize: number;
+  listeners: Set<LogListener>;
 }
 
 // Use a smaller log buffer on systems with limited memory to reduce overhead.
@@ -21,12 +24,20 @@ const defaultMaxSize = totalMemMB < 2048 ? 200 : 1000;
 export const logBuffer: LogBuffer = {
   entries: [],
   maxSize: defaultMaxSize,
+  listeners: new Set(),
 };
 
 export function addLogEntry(entry: LogEntry) {
   logBuffer.entries.push(entry);
   if (logBuffer.entries.length > logBuffer.maxSize) {
     logBuffer.entries.shift();
+  }
+  for (const listener of logBuffer.listeners) {
+    try {
+      listener(entry);
+    } catch {
+      // Listener errors should not break log ingestion
+    }
   }
 }
 
@@ -96,11 +107,14 @@ export function logsApi(_logger: LoggerService): express.Router {
       sendLog(log);
     }
 
+    logBuffer.listeners.add(sendLog);
+
     const intervalId = setInterval(() => {
       res.write(": keepalive\n\n");
     }, 30000);
 
     req.on("close", () => {
+      logBuffer.listeners.delete(sendLog);
       clearInterval(intervalId);
     });
   });
