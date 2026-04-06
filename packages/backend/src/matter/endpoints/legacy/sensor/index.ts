@@ -20,6 +20,7 @@ import { Pm1SensorType } from "./devices/pm1-sensor.js";
 import { Pm10SensorType } from "./devices/pm10-sensor.js";
 import { Pm25SensorType } from "./devices/pm25-sensor.js";
 import { PressureSensorType } from "./devices/pressure-sensor.js";
+import { RadonSensorType } from "./devices/radon-sensor.js";
 import {
   TemperatureHumidityPressureSensorType,
   TemperatureHumidityPressureSensorWithBatteryType,
@@ -148,6 +149,9 @@ export function SensorDevice(
   }
   if (deviceClass === SensorDeviceClass.pm1) {
     return Pm1SensorType.set({ homeAssistantEntity });
+  }
+  if (deviceClass === SensorDeviceClass.radon) {
+    return RadonSensorType.set({ homeAssistantEntity });
   }
   if (
     deviceClass === SensorDeviceClass.power ||
