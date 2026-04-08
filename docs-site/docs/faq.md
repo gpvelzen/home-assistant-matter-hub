@@ -226,7 +226,7 @@ See [#276](https://github.com/RiDDiX/home-assistant-matter-hub/issues/276) for d
 
 ## What's the difference between Stable and Alpha?
 
-- **Stable** (v2.0.30): Production-ready, recommended for daily use
+- **Stable** (v2.0.36): Production-ready, recommended for daily use
 - **Alpha**: New features for testing, may contain bugs
 
 See the [Alpha Features Guide](./guides/alpha-features.md) for details on alpha features.
@@ -281,7 +281,7 @@ Since v2.0.24, thermostats support **auto-resume** — when off and you set a te
 
 If not working:
 
-- Update to v2.0.30+
+- Update to v2.0.36+
 - Only works for single-temp mode (not range/auto)
 - Thermostat must be in "Off" state
 

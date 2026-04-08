@@ -37,7 +37,7 @@ of port forwarding etc.
 
 | Channel | Branch | Current Version | Description |
 |---------|--------|-----------------|-------------|
-| **Stable** | `main` | v2.0.30 | Production-ready, recommended for most users |
+| **Stable** | `main` | v2.0.36 | Production-ready, recommended for most users |
 | **Alpha** | `alpha` | v2.1.0-alpha.x | Pre-release with new features, for early adopters |
 | **Testing** | `testing` | v4.1.0-testing.x | ⚠️ **Highly unstable!** Experimental features, may break |
 
@@ -52,30 +52,39 @@ of port forwarding etc.
 ## 🎉 What's New
 
 <details>
-<summary><strong>📦 Stable Features (v2.0.30)</strong> - Click to expand</summary>
+<summary><strong>📦 Stable Features (v2.0.36)</strong> - Click to expand</summary>
 
-**New in v2.0.30:**
-
-| Feature | Description |
-|---------|-------------|
-| **� Mapped Entity Propagation Fix** | Propagate mapped entity changes (battery, humidity, etc.) to Matter endpoints — fixes stale sensor readings |
-| **🖥️ API Error Surfacing** | Surface API errors instead of silently swallowing them ([#232](https://github.com/RiDDiX/home-assistant-matter-hub/issues/232)) |
-
-**Previously in v2.0.29:**
+**New in v2.0.36:**
 
 | Feature | Description |
 |---------|-------------|
-| **� Light currentLevel Fix** | Retain light currentLevel when off to prevent Apple Home 100% brightness on turn-on ([#225](https://github.com/RiDDiX/home-assistant-matter-hub/issues/225)) |
-| **�️ Bridge Config Save Fix** | Decouple save button from RJSF schema validation errors ([#232](https://github.com/RiDDiX/home-assistant-matter-hub/issues/232)) |
-| **🌀 Fan Device Feature Fix** | Correct FanDeviceFeature TURN_ON/TURN_OFF enum values to match Home Assistant |
-| **🌡️ Humidity Auto-Mapping Fix** | Correct autoHumidityMapping schema default to match runtime behavior |
+| **🏗️ User-Defined Composed Devices** | Create custom composed devices via composedEntities mapping ([#220](https://github.com/RiDDiX/home-assistant-matter-hub/issues/220)) |
+| **🔌 Plugin Domain Mappings** | Domain mapping support in plugin API with cloud-mock example |
+| **🔋 Valve & Pump Battery** | Battery support for valve and pump endpoints |
+| **🌐 German + Russian Translations** | Complete German translation and new Russian language |
+| **📡 Session Recovery** | Graceful session close, dead session cleanup, mDNS re-announcement ([#266](https://github.com/RiDDiX/home-assistant-matter-hub/issues/266)) |
+| **🔗 Quick Link to Failed Devices** | Dashboard quick link to failed devices ([#270](https://github.com/RiDDiX/home-assistant-matter-hub/issues/270)) |
+| **🌡️ Thermostat Fix** | Skip climate.turn_on when already on ([#269](https://github.com/RiDDiX/home-assistant-matter-hub/issues/269)) |
+| **🪟 Cover Fix** | Correct stale targetPosition during external movement ([#268](https://github.com/RiDDiX/home-assistant-matter-hub/issues/268)) |
+| **🌬️ Air Purifier Fix** | Sub-endpoints for composed air purifier, manual temp/humidity mapping ([#265](https://github.com/RiDDiX/home-assistant-matter-hub/issues/265)) |
+| **🔥 Cooling-Only Thermostat Fix** | Prevent HeatingOnly on cooling-only thermostat ([#264](https://github.com/RiDDiX/home-assistant-matter-hub/issues/264)) |
+| **↔️ Per-Entity Cover Swap** | Individual coverSwapOpenClose per cover ([#263](https://github.com/RiDDiX/home-assistant-matter-hub/issues/263)) |
+
+**Previously in v2.0.35:**
+
+| Feature | Description |
+|---------|-------------|
+| **🏠 HA 2026.3 Clean Area Support** | Native support for the new `vacuum.clean_area` action |
+| **🤖 Valetudo Identifier Mapping** | Custom `valetudoIdentifier` for MQTT topic case mismatches |
+| **🔌 Plugin System Hardening** | Validation, API version check, tgz upload/local install |
+| **📖 Docusaurus Docs** | New documentation site with improved search and navigation |
 
 </details>
 
 <details>
 <summary><strong>🧪 Alpha Features (v2.1.0-alpha.x)</strong> - Click to expand</summary>
 
-**Alpha is currently in sync with Stable (v2.0.30).** All alpha features have been promoted to stable. New alpha features will appear here as development continues.
+**Alpha is currently in sync with Stable (v2.0.36).** All alpha features have been promoted to stable. New alpha features will appear here as development continues.
 
 </details>
 
@@ -100,6 +109,24 @@ of port forwarding etc.
 
 <details>
 <summary><strong>📜 Previous Stable Versions</strong> - Click to expand</summary>
+
+### v2.0.35
+HA 2026.3 Clean Area Support, Valetudo Identifier Mapping, Plugin System Hardening, Registry Fingerprint Fix, Roomba Battery Fix, Contact Sensor Fix, Script Momentary Fix, Docusaurus Docs
+
+### v2.0.34
+Automatic Backup, Vacuum Battery Auto-Map, Deprecated Feature Flags Fix
+
+### v2.0.33
+Endpoint Number Preservation, Binary Sensor Battery Auto-Map
+
+### v2.0.32
+Multi-Language Support, Plugin System, New Device Types (PIR, Rain, Electrical, AQ Sensors), Cluster Diagnostics, Dashboard Enhancements, Mapping Profile Export/Import, Fan & Air Purifier Fixes, Stale Session Cleanup, KNX Cover Fix
+
+### v2.0.31
+Controller Profiles & Area Setup, Fan Speed/Preset Fix, Optimistic State Fix, Cover Target Fix, Humidity Auto-Mapping Default
+
+### v2.0.30
+Mapped Entity Propagation Fix, API Error Surfacing
 
 ### v2.0.29
 Light currentLevel Fix, Bridge Config Save Fix, Fan Device Feature Fix, Humidity Auto-Mapping Fix
@@ -441,7 +468,7 @@ Thank you to everyone who helps improve this project by reporting issues!
 | 💎 StefanS | 💎 Manny B. | 💎 Bonjon |
 | 💎 TobiR | 💎 Franz Huber | 💎 Michele Larese de Prata |
 | 💎 [@CNCB](https://github.com/CNCB) | 💎 [@pelican1997](https://github.com/pelican1997) | 💎 [@PeJanNL](https://github.com/PeJanNL) |
-| 💎 [@bra1nbuster](https://github.com/bra1nbuster) | | |
+| 💎 [@bra1nbuster](https://github.com/bra1nbuster) | 💎 [@knuti1960](https://github.com/knuti1960) | |
 
 🙏 *...and anonymous supporters who prefer not to be named.*
 

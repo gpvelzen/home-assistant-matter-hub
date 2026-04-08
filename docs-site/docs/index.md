@@ -53,30 +53,39 @@ Home, ...) are not placed in the same network segment. Please make sure to revie
 ## What's New
 
 <details>
-<summary><strong>📦 Stable (v2.0.30) - Current</strong></summary>
+<summary><strong>📦 Stable (v2.0.36) - Current</strong></summary>
 
-**New in v2.0.30:**
-
-| Feature | Description |
-|---------|-------------|
-| **🔗 Mapped Entity Propagation Fix** | Propagate mapped entity changes (battery, humidity, etc.) to Matter endpoints — fixes stale sensor readings |
-| **🖥️ API Error Surfacing** | Surface API errors instead of silently swallowing them ([#232](https://github.com/RiDDiX/home-assistant-matter-hub/issues/232)) |
-
-**Previously in v2.0.29:**
+**New in v2.0.36:**
 
 | Feature | Description |
 |---------|-------------|
-| **💡 Light currentLevel Fix** | Retain light currentLevel when off to prevent Apple Home 100% brightness on turn-on ([#225](https://github.com/RiDDiX/home-assistant-matter-hub/issues/225)) |
-| **�️ Bridge Config Save Fix** | Decouple save button from RJSF schema validation errors ([#232](https://github.com/RiDDiX/home-assistant-matter-hub/issues/232)) |
-| **🌀 Fan Device Feature Fix** | Correct FanDeviceFeature TURN_ON/TURN_OFF enum values to match Home Assistant |
-| **🌡️ Humidity Auto-Mapping Fix** | Correct autoHumidityMapping schema default to match runtime behavior |
+| **🏗️ User-Defined Composed Devices** | Create custom composed devices via composedEntities mapping ([#220](https://github.com/RiDDiX/home-assistant-matter-hub/issues/220)) |
+| **🔌 Plugin Domain Mappings** | Domain mapping support in plugin API with cloud-mock example |
+| **🔋 Valve & Pump Battery** | Battery support for valve and pump endpoints |
+| **🌐 German + Russian Translations** | Complete German translation and new Russian language |
+| **📡 Session Recovery** | Graceful session close, dead session cleanup, mDNS re-announcement ([#266](https://github.com/RiDDiX/home-assistant-matter-hub/issues/266)) |
+| **🔗 Quick Link to Failed Devices** | Dashboard quick link to failed devices ([#270](https://github.com/RiDDiX/home-assistant-matter-hub/issues/270)) |
+| **🌡️ Thermostat Fix** | Skip climate.turn_on when already on ([#269](https://github.com/RiDDiX/home-assistant-matter-hub/issues/269)) |
+| **🪟 Cover Fix** | Correct stale targetPosition during external movement ([#268](https://github.com/RiDDiX/home-assistant-matter-hub/issues/268)) |
+| **🌬️ Air Purifier Fix** | Sub-endpoints for composed air purifier, manual temp/humidity mapping ([#265](https://github.com/RiDDiX/home-assistant-matter-hub/issues/265)) |
+| **🔥 Cooling-Only Thermostat Fix** | Prevent HeatingOnly on cooling-only thermostat ([#264](https://github.com/RiDDiX/home-assistant-matter-hub/issues/264)) |
+| **↔️ Per-Entity Cover Swap** | Individual coverSwapOpenClose per cover ([#263](https://github.com/RiDDiX/home-assistant-matter-hub/issues/263)) |
+
+**Previously in v2.0.35:**
+
+| Feature | Description |
+|---------|-------------|
+| **🏠 HA 2026.3 Clean Area Support** | Native support for the new `vacuum.clean_area` action |
+| **🤖 Valetudo Identifier Mapping** | Custom `valetudoIdentifier` for MQTT topic case mismatches |
+| **🔌 Plugin System Hardening** | Validation, API version check, tgz upload/local install |
+| **📖 Docusaurus Docs** | New documentation site with improved search and navigation |
 
 </details>
 
 <details>
 <summary><strong>🧪 Alpha (v2.1.0-alpha.x)</strong></summary>
 
-All previously alpha-only features have been promoted to stable. New alpha features will appear here as development continues. See the [Alpha Features Guide](./guides/alpha-features.md) for installation instructions.
+**Alpha is currently in sync with Stable (v2.0.36).** All alpha features have been promoted to stable. New alpha features will appear here as development continues. See the [Alpha Features Guide](./guides/alpha-features.md) for installation instructions.
 
 </details>
 
