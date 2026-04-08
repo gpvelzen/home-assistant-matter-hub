@@ -10,6 +10,7 @@ import {
 } from "@matter/general";
 import type { EndpointType } from "@matter/main";
 import { RvcOperationalStateServer as RvcOpStateBehavior } from "@matter/main/behaviors/rvc-operational-state";
+import { RvcRunModeServer as RvcRunModeBehavior } from "@matter/main/behaviors/rvc-run-mode";
 import debounce from "debounce";
 import type { BridgeRegistry } from "../../services/bridges/bridge-registry.js";
 import type { HomeAssistantStates } from "../../services/home-assistant/home-assistant-registry.js";
@@ -327,15 +328,28 @@ export class ServerModeVacuumEndpoint extends EntityEndpoint {
       const counter = this.keepaliveCounter;
       logger.info(`Keepalive #${counter} for ${this.entityId}`);
 
-      // Read current operationalError to preserve errorStateId
-      const currentError = this.stateOf(RvcOpStateBehavior).operationalError;
+      // Read current state from behaviors — reactor writes may not have
+      // produced subscription reports (postCommit writes are buffered),
+      // so re-push the current operationalState and currentMode to
+      // ensure controllers see the latest values.
+      const opState = this.stateOf(RvcOpStateBehavior);
 
       await this.setStateOf(RvcOpStateBehavior, {
+        operationalState: opState.operationalState,
         operationalError: {
-          errorStateId: currentError.errorStateId,
+          errorStateId: opState.operationalError.errorStateId,
           errorStateDetails: `k${counter}`,
         },
       });
+
+      // Also push currentMode so controllers see Idle after cleaning ends
+      if (this.behaviors.has(RvcRunModeBehavior)) {
+        const runMode = this.stateOf(RvcRunModeBehavior);
+        await this.setStateOf(RvcRunModeBehavior, {
+          currentMode: runMode.currentMode,
+        });
+      }
+
       logger.info(`Keepalive #${counter} committed for ${this.entityId}`);
     } catch (e: unknown) {
       // Suppress expected errors during endpoint lifecycle transitions
