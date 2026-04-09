@@ -26,6 +26,9 @@ class StandalonePowerServer extends PowerBase {
   }
 
   private update(entity: HomeAssistantEntityInformation) {
+    if (!entity.state || !entity.state.attributes) {
+      return;
+    }
     const state = entity.state.state;
     if (state == null || Number.isNaN(+state)) return;
 
@@ -89,6 +92,9 @@ class StandaloneEnergyServer extends EnergyFeaturedBase {
   }
 
   private update(entity: HomeAssistantEntityInformation) {
+    if (!entity.state || !entity.state.attributes) {
+      return;
+    }
     const attrs = entity.state.attributes as SensorDeviceAttributes;
     if (attrs.device_class !== SensorDeviceClass.energy) return;
 

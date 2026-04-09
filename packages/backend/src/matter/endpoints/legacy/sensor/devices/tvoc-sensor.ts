@@ -64,6 +64,9 @@ class TvocAirQualityServer extends TvocAirQualityServerBase {
   }
 
   private update(entity: HomeAssistantEntityInformation) {
+    if (!entity.state || !entity.state.attributes) {
+      return;
+    }
     const state = entity.state.state;
     const attributes = entity.state.attributes as SensorDeviceAttributes;
     const deviceClass = attributes.device_class;
