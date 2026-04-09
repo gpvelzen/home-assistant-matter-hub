@@ -23,14 +23,7 @@ class GenericSwitchServerBase extends FeaturedBase {
     const homeAssistant = await this.agent.load(HomeAssistantEntityBehavior);
     const entityId = homeAssistant.entityId;
 
-    const attrs = homeAssistant.entity.state
-      .attributes as EventDeviceAttributes;
-    const maxPress = this.detectMultiPressMax(attrs.event_types ?? []);
-    this.state.multiPressMax = maxPress;
-
-    logger.debug(
-      `[${entityId}] GenericSwitch initialized (multiPressMax: ${maxPress})`,
-    );
+    logger.debug(`[${entityId}] GenericSwitch initialized`);
 
     this.reactTo(homeAssistant.onChange, this.handleEventChange);
   }
@@ -124,15 +117,6 @@ class GenericSwitchServerBase extends FeaturedBase {
 
   private isLongRelease(lower: string): boolean {
     return lower.includes("long") && lower.includes("release");
-  }
-
-  private detectMultiPressMax(eventTypes: string[]): number {
-    let max = 1;
-    for (const et of eventTypes) {
-      const count = this.getPressCount(et.toLowerCase());
-      if (count > max) max = count;
-    }
-    return max;
   }
 
   private getPressCount(lower: string): number {
