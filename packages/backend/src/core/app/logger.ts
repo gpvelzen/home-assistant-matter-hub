@@ -107,42 +107,46 @@ export class BetterLogger extends Logger {
   }
 
   override debug(...values: unknown[]): void {
-    const message = values.map((v) => String(v)).join(" ");
-    addLogEntry({
-      timestamp: new Date().toISOString(),
-      level: "debug",
-      message: `[${this.loggerName}] ${message}`,
-    });
+    if (this._level <= MatterLogLevel.DEBUG) {
+      addLogEntry({
+        timestamp: new Date().toISOString(),
+        level: "debug",
+        message: `[${this.loggerName}] ${values.map((v) => String(v)).join(" ")}`,
+      });
+    }
     super.debug(...values);
   }
 
   override info(...values: unknown[]): void {
-    const message = values.map((v) => String(v)).join(" ");
-    addLogEntry({
-      timestamp: new Date().toISOString(),
-      level: "info",
-      message: `[${this.loggerName}] ${message}`,
-    });
+    if (this._level <= MatterLogLevel.INFO) {
+      addLogEntry({
+        timestamp: new Date().toISOString(),
+        level: "info",
+        message: `[${this.loggerName}] ${values.map((v) => String(v)).join(" ")}`,
+      });
+    }
     super.info(...values);
   }
 
   override warn(...values: unknown[]): void {
-    const message = values.map((v) => String(v)).join(" ");
-    addLogEntry({
-      timestamp: new Date().toISOString(),
-      level: "warn",
-      message: `[${this.loggerName}] ${message}`,
-    });
+    if (this._level <= MatterLogLevel.WARN) {
+      addLogEntry({
+        timestamp: new Date().toISOString(),
+        level: "warn",
+        message: `[${this.loggerName}] ${values.map((v) => String(v)).join(" ")}`,
+      });
+    }
     super.warn(...values);
   }
 
   override error(...values: unknown[]): void {
-    const message = values.map((v) => String(v)).join(" ");
-    addLogEntry({
-      timestamp: new Date().toISOString(),
-      level: "error",
-      message: `[${this.loggerName}] ${message}`,
-    });
+    if (this._level <= MatterLogLevel.ERROR) {
+      addLogEntry({
+        timestamp: new Date().toISOString(),
+        level: "error",
+        message: `[${this.loggerName}] ${values.map((v) => String(v)).join(" ")}`,
+      });
+    }
     super.error(...values);
   }
 
