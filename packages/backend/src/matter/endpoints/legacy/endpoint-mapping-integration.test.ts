@@ -14,6 +14,8 @@ import {
   type LightDeviceAttributes,
   LightDeviceColorMode,
   type MatterDeviceType,
+  type MediaPlayerDeviceAttributes,
+  MediaPlayerDeviceClass,
   MediaPlayerDeviceFeature,
   type SensorDeviceAttributes,
   SensorDeviceClass,
@@ -409,6 +411,27 @@ describe("endpoint mapping integration", () => {
           event_type: "press",
         }),
         "generic_switch",
+      ],
+      [
+        "media_player (tv) → speaker",
+        createEntity<MediaPlayerDeviceAttributes>("media_player.ovr15", "off", {
+          device_class: MediaPlayerDeviceClass.Tv,
+          supported_features:
+            MediaPlayerDeviceFeature.TURN_ON |
+            MediaPlayerDeviceFeature.TURN_OFF |
+            MediaPlayerDeviceFeature.VOLUME_SET,
+        }),
+        "speaker",
+      ],
+      [
+        "media_player (tv) → basic_video_player",
+        createEntity<MediaPlayerDeviceAttributes>("media_player.ovr16", "off", {
+          device_class: MediaPlayerDeviceClass.Tv,
+          supported_features:
+            MediaPlayerDeviceFeature.TURN_ON |
+            MediaPlayerDeviceFeature.TURN_OFF,
+        }),
+        "basic_video_player",
       ],
     ];
 

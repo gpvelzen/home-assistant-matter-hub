@@ -38,7 +38,10 @@ import { OnOffLightType } from "./light/devices/on-off-light-device.js";
 import { LightDevice } from "./light/index.js";
 import { LockDevice } from "./lock/index.js";
 import { VideoPlayerDevice } from "./media-player/basic-video-player.js";
-import { MediaPlayerDevice } from "./media-player/index.js";
+import {
+  MediaPlayerDevice,
+  SpeakerMediaPlayerDevice,
+} from "./media-player/index.js";
 import { PumpEndpoint } from "./pump/index.js";
 import { RemoteDevice } from "./remote/index.js";
 import { SceneDevice } from "./scene/index.js";
@@ -238,7 +241,7 @@ const matterDeviceTypeFactories: Partial<
   air_purifier: AirPurifierEndpoint,
   robot_vacuum_cleaner: (ha) => VacuumDevice(ha),
   humidifier_dehumidifier: HumidifierDevice,
-  speaker: MediaPlayerDevice,
+  speaker: SpeakerMediaPlayerDevice,
   basic_video_player: VideoPlayerDevice,
   humidity_sensor: (ha) => HumiditySensorType.set({ homeAssistantEntity: ha }),
   temperature_sensor: (ha) =>
