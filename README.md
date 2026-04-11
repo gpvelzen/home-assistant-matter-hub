@@ -468,7 +468,7 @@ Thank you to everyone who helps improve this project by reporting issues!
 | 💎 StefanS | 💎 Manny B. | 💎 Bonjon |
 | 💎 TobiR | 💎 Franz Huber | 💎 Michele Larese de Prata |
 | 💎 [@CNCB](https://github.com/CNCB) | 💎 [@pelican1997](https://github.com/pelican1997) | 💎 [@PeJanNL](https://github.com/PeJanNL) |
-| 💎 [@bra1nbuster](https://github.com/bra1nbuster) | 💎 [@knuti1960](https://github.com/knuti1960) | |
+| 💎 [@bra1nbuster](https://github.com/bra1nbuster) | 💎 [@knuti1960](https://github.com/knuti1960) | 💎 [@ppttu](https://github.com/ppttu) |
 
 🙏 *...and anonymous supporters who prefer not to be named.*
 
