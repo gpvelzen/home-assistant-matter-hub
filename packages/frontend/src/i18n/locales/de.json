@@ -417,7 +417,8 @@
   },
   "footer": {
     "github": "GitHub",
-    "documentation": "Dokumentation"
+    "documentation": "Dokumentation",
+    "support": "Unterstützen"
   },
   "devices": {
     "title": "Geräte",

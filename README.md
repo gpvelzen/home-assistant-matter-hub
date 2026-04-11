@@ -502,6 +502,8 @@ Thank you to everyone who helps improve this project by reporting issues!
 
 If you find this project useful, consider supporting its development:
 
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-Donate-ea4aaa?logo=githubsponsors&style=for-the-badge)](https://github.com/sponsors/RiDDiX)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=kofi&logoColor=white&style=for-the-badge)](https://ko-fi.com/riddix)
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-blue?logo=paypal&style=for-the-badge)](https://www.paypal.me/RiDDiX93)
 
 Your support helps cover hosting costs and motivates continued development. Thank you! ❤️

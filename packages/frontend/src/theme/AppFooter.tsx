@@ -18,6 +18,10 @@ export const AppFooter = () => {
       name: t("footer.documentation"),
       url: navigation.documentation,
     },
+    {
+      name: t("footer.support"),
+      url: navigation.support,
+    },
   ];
   return (
     <Container sx={{ mt: 16, mb: 4 }}>

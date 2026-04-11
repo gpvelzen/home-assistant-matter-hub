@@ -35,6 +35,7 @@ export const navigation = {
 
   githubRepository: "https://github.com/riddix/home-assistant-matter-hub/",
   documentation: documentationUrl,
+  support: `${documentationUrl}/support`,
   faq: {
     multiFabric: `${documentationUrl}/connect-multiple-fabrics`,
     bridgeConfig: `${documentationUrl}/bridge-configuration`,

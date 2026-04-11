@@ -582,7 +582,8 @@
   },
   "footer": {
     "github": "GitHub",
-    "documentation": "Documentation"
+    "documentation": "Documentation",
+    "support": "Support"
   },
   "languageSwitcher": {
     "disclaimer": "Translations may be incomplete.",
