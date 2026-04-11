@@ -19,10 +19,16 @@ export class BasicInformationServer extends Base {
     if (!entity.state || !entity.state.attributes) {
       return;
     }
-    const { basicInformation } = this.env.get(BridgeDataProvider);
+    const { basicInformation, featureFlags } = this.env.get(BridgeDataProvider);
     const homeAssistant = this.agent.get(HomeAssistantEntityBehavior);
     const device = entity.deviceRegistry;
     const mapping = homeAssistant.state.mapping;
+    const nodeLabel =
+      ellipse(32, homeAssistant.state.customName) ??
+      ellipse(32, entity.state?.attributes?.friendly_name) ??
+      ellipse(32, entity.entity_id);
+    const productNameFromNodeLabel =
+      featureFlags?.productNameFromNodeLabel === true ? nodeLabel : undefined;
     applyPatchState(this.state, {
       vendorId: VendorId(basicInformation.vendorId),
       vendorName:
@@ -31,6 +37,7 @@ export class BasicInformationServer extends Base {
         hash(32, basicInformation.vendorName),
       productName:
         ellipse(32, mapping?.customProductName) ??
+        productNameFromNodeLabel ??
         ellipse(32, device?.model_id) ??
         ellipse(32, device?.model) ??
         hash(32, basicInformation.productName),
@@ -40,10 +47,7 @@ export class BasicInformationServer extends Base {
       softwareVersion: basicInformation.softwareVersion,
       hardwareVersionString: ellipse(64, device?.hw_version),
       softwareVersionString: ellipse(64, device?.sw_version),
-      nodeLabel:
-        ellipse(32, homeAssistant.state.customName) ??
-        ellipse(32, entity.state?.attributes?.friendly_name) ??
-        ellipse(32, entity.entity_id),
+      nodeLabel,
       reachable:
         entity.state?.state != null && entity.state.state !== "unavailable",
       serialNumber:

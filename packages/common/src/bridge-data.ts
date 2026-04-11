@@ -51,6 +51,14 @@ interface AllBridgeFeatureFlags {
    */
   readonly autoForceSync: boolean;
   /**
+   * Product Name from Node Label: Report the entity's node label (custom name /
+   * friendly name / entity id) as the Matter productName. Useful for controllers
+   * like Aqara that display productName as the device name instead of nodeLabel.
+   * A per-entity customProductName still takes precedence over this flag.
+   * Default: false (disabled)
+   */
+  readonly productNameFromNodeLabel: boolean;
+  /**
    * Vacuum OnOff Cluster: Add an OnOff cluster to robot vacuum endpoints.
    * Amazon Alexa REQUIRES PowerController (mapped from OnOff) for robotic vacuums.
    * Without it, the vacuum commissions but never appears in the Alexa app.

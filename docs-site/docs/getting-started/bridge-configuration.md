@@ -279,6 +279,7 @@ Feature flags control advanced behavior of the bridge. Configure them in the **B
 | `coverUseHomeAssistantPercentage` | Use HA percentages directly (Alexa-friendly) | `false` |
 | `includeHiddenEntities` | Include entities marked as hidden in Home Assistant | `false` |
 | `serverMode` | Expose device as standalone Matter device (required for Robot Vacuums with Apple Home/Alexa). Only ONE device per bridge! | `false` |
+| `productNameFromNodeLabel` | Report the node label (custom name / friendly name / entity id) as Matter `productName`. Useful for Aqara controllers that show productName as the device name. A per-entity `customProductName` still wins. | `false` |
 | `vacuumOnOff` | Add OnOff cluster to vacuum endpoints. Required for Alexa discovery. In Server Mode, enabled by default unless explicitly set to `false`. In Bridge Mode, disabled by default. | (see description) |
 | `vacuumIncludeUnnamedRooms` | Include rooms without names in vacuum room selection | `false` |
 

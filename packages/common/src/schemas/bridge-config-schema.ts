@@ -218,6 +218,16 @@ const featureFlagSchema: JSONSchema7 = {
       default: false,
     },
 
+    productNameFromNodeLabel: {
+      title: "Product Name from Node Label",
+      description:
+        "Report the entity's node label (custom name / friendly name / entity id) as the Matter productName. " +
+        "Useful for controllers like Aqara that display productName as the device name instead of nodeLabel. " +
+        "A per-entity customProductName still takes precedence.",
+      type: "boolean",
+      default: false,
+    },
+
     vacuumOnOff: {
       title: "Vacuum: Include OnOff Cluster (Alexa)",
       description:

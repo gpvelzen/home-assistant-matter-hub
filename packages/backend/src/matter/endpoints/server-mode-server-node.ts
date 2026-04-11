@@ -1,5 +1,6 @@
 import type {
   BridgeData,
+  BridgeFeatureFlags,
   EntityMappingConfig,
   HomeAssistantDeviceRegistry,
 } from "@home-assistant-matter-hub/common";
@@ -22,6 +23,7 @@ import { trimToLength } from "../../utils/trim-to-length.js";
  */
 export class ServerModeServerNode extends ServerNode {
   private deviceEndpoint?: Endpoint;
+  private readonly featureFlags?: BridgeFeatureFlags;
 
   constructor(env: Environment, bridgeData: BridgeData) {
     super({
@@ -51,6 +53,7 @@ export class ServerModeServerNode extends ServerNode {
         persistenceEnabled: false,
       },
     });
+    this.featureFlags = bridgeData.featureFlags;
   }
 
   /**
@@ -87,19 +90,25 @@ export class ServerModeServerNode extends ServerNode {
     mapping: EntityMappingConfig | undefined,
     friendlyName: string | undefined,
   ): void {
+    const nodeLabel =
+      trimToLength(mapping?.customName, 32, "...") ??
+      trimToLength(friendlyName, 32, "...") ??
+      trimToLength(entityId, 32, "...");
+    const productNameFromNodeLabel =
+      this.featureFlags?.productNameFromNodeLabel === true
+        ? nodeLabel
+        : undefined;
     applyPatchState(this.state.basicInformation, {
       vendorName:
         trimToLength(mapping?.customVendorName, 32, "...") ??
         trimToLength(device?.manufacturer, 32, "..."),
       productName:
         trimToLength(mapping?.customProductName, 32, "...") ??
+        productNameFromNodeLabel ??
         trimToLength(device?.model_id, 32, "...") ??
         trimToLength(device?.model, 32, "..."),
       productLabel: trimToLength(device?.model, 64, "..."),
-      nodeLabel:
-        trimToLength(mapping?.customName, 32, "...") ??
-        trimToLength(friendlyName, 32, "...") ??
-        trimToLength(entityId, 32, "..."),
+      nodeLabel,
       serialNumber: trimToLength(mapping?.customSerialNumber, 32, "..."),
       hardwareVersionString: trimToLength(device?.hw_version, 64, "..."),
       softwareVersionString: trimToLength(device?.sw_version, 64, "..."),
